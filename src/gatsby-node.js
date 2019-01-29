@@ -107,55 +107,57 @@ exports.sourceNodes = async (
         `tables from Directus.`,
     );
 
-    allCollectionsData.map(async collectionData => {
-        const collectionNode = CollectionNode(collectionData);
-        await createNode(collectionNode);
-        const collectionItems = await fetcher.getItemsForCollection(collectionData.collection);
-        console.log(
-            `gatsby-source-directus`.blue,
-            'success'.green,
-            `Fetched`,
-            collectionItems.length.toString().cyan,
-            `items for `,
-            collectionData.collection.cyan,
-            ` table...`,
-        );
+    await Promise.all(
+        allCollectionsData.map(async collectionData => {
+            const collectionNode = CollectionNode(collectionData);
+            await createNode(collectionNode);
+            const collectionItems = await fetcher.getItemsForCollection(collectionData.collection);
+            console.log(
+                `gatsby-source-directus`.blue,
+                'success'.green,
+                `Fetched`,
+                collectionItems.length.toString().cyan,
+                `items for `,
+                collectionData.collection.cyan,
+                ` table...`,
+            );
 
-        // Get the name for this node type
-        const name = getNodeTypeNameForCollection(collectionData.collection, nameExceptions);
-        console.log(
-            `gatsby-source-directus`.blue,
-            'info'.cyan,
-            `Generating Directus${name} node type...`,
-        );
+            // Get the name for this node type
+            const name = getNodeTypeNameForCollection(collectionData.collection, nameExceptions);
+            console.log(
+                `gatsby-source-directus`.blue,
+                'info'.cyan,
+                `Generating Directus${name} node type...`,
+            );
 
-        // We're creating a separate Item Type for every table
-        const ItemNode = createCollectionItemFactory(name, []);
+            // We're creating a separate Item Type for every table
+            const ItemNode = createCollectionItemFactory(name, allFiles);
 
-        if (collectionItems && collectionItems.length > 0) {
-            // Get all the items for the table above and create a gatsby node for it
-            collectionItems.map(async collectionItemData => {
-                // Create a Table Item node based on the API response
-                const collectionItemNode = ItemNode(collectionItemData, {
-                    parent: collectionNode.id,
+            if (collectionItems && collectionItems.length > 0) {
+                // Get all the items for the table above and create a gatsby node for it
+                collectionItems.map(async collectionItemData => {
+                    // Create a Table Item node based on the API response
+                    const collectionItemNode = ItemNode(collectionItemData, {
+                        parent: collectionNode.id,
+                    });
+
+                    // Pass it to Gatsby to create a node
+                    await createNode(collectionItemNode);
                 });
-
-                // Pass it to Gatsby to create a node
-                await createNode(collectionItemNode);
-            });
-            console.log(
-                `gatsby-source-directus`.blue,
-                `success`.green,
-                `Directus${name} node generated`,
-            );
-        } else {
-            console.log(
-                `gatsby-source-directus`.blue,
-                `warning`.yellow,
-                `${collectionData.collection} table has no rows. Skipping...`,
-            );
-        }
-    });
+                console.log(
+                    `gatsby-source-directus`.blue,
+                    `success`.green,
+                    `Directus${name} node generated`,
+                );
+            } else {
+                console.log(
+                    `gatsby-source-directus`.blue,
+                    `warning`.yellow,
+                    `${collectionData.collection} table has no rows. Skipping...`,
+                );
+            }
+        }),
+    );
 
     console.log('AFTER');
 };

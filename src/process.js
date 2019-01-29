@@ -2,7 +2,7 @@ import createNodeHelpers from 'gatsby-node-helpers';
 import Pluralize from 'pluralize';
 
 const { createNodeFactory } = createNodeHelpers({
-    typePrefix: `Directus`,
+    typePrefix: 'Directus',
 });
 
 const COLLECTION_NODE_TYPE = `Collection`;
@@ -42,7 +42,7 @@ export const createCollectionItemFactory = (name, allFiles) => {
             }
         });
 
-        return node;
+        return cleanNode;
     });
 };
 
