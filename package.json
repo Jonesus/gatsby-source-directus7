@@ -1,20 +1,22 @@
 {
-    "name": "gatsby-source-directus",
+    "name": "gatsby-source-directus7",
     "version": "0.0.44",
     "description": "Source plugin for Gatsby to fetch data from Directus Headless CMS",
     "author": "Joonas Palosuo <joonas.palosuo@gmail.com>",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/jonesus/gatsby-source-directus.git"
+        "url": "https://github.com/jonesus/gatsby-source-directus7.git"
     },
     "bugs": {
-        "url": "https://github.com/jonesus/gatsby-source-directus/issues"
+        "url": "https://github.com/jonesus/gatsby-source-directus7/issues"
     },
     "keywords": [
         "gatsby",
         "gatsby-plugin",
-        "gatsby-source-plugin"
+        "gatsby-source-plugin",
+        "gatsby-source-directus",
+        "directus"
     ],
     "main": "gatsby-node.js",
     "scripts": {
