@@ -1,55 +1,21 @@
 import Fetcher from './fetch';
-import { CollectionNode, FileNode, createCollectionItemFactory, getNodeTypeNameForCollection } from './process';
-import Colors from 'colors';
-import { createRemoteFileNode } from 'gatsby-source-filesystem'
+import {
+    CollectionNode,
+    FileNode,
+    createCollectionItemFactory,
+    getNodeTypeNameForCollection,
+} from './process';
+import Colors from 'colors'; // eslint-disable-line
+import { createRemoteFileNode } from 'gatsby-source-filesystem';
 
-let _url = '';
-let _apiKey = '';
-let _version = '1.1';
-let _requestParams = {
-    depth: 1,
-}
-let _fileRequestParams = {}
-let _auth = {}
-
-exports.sourceNodes = async ({ boundActionCreators, getNode, store, cache, createNodeId }, {
-    url,
-    protocol,
-    apiKey,
-    version,
-    nameExceptions,
-    requestParams,
-    fileRequestParams,
-    auth,
-}) => {
+exports.sourceNodes = async (
+    { boundActionCreators, getNode, store, cache, createNodeId },
+    { url, project, apiKey, email, password, nameExceptions },
+) => {
     const { createNode } = boundActionCreators;
 
-    protocol = protocol !== undefined && protocol !== '' ? protocol : 'http';
-    protocol = protocol + "://";
-
-    // Trim any trailing slashes from the URL
-    url = url.replace(/\/$/, "");
-
-    // Assign the version
-    _version = version !== undefined && version !== '' ? version : _version;
-
-    // Merge the URL with a protocol
-    _url = protocol + url;
-
-    // Assign the API key
-    _apiKey = apiKey;
-
-    // Set request parameters
-    _requestParams = requestParams || _requestParams;
-
-    // Set parameters for file fetching
-    _fileRequestParams = fileRequestParams || _fileRequestParams
-
-    // Set htaccess auth for file download
-    _auth = auth || _auth
-
     // Initialize the Fetcher class with API key and URL
-    const fetcher = new Fetcher(_apiKey, _url, _version, _requestParams, _fileRequestParams);
+    const fetcher = new Fetcher(url, project, apiKey, email, password);
 
     /*
     console.log(`gatsby-source-directus`.cyan, 'Fetching Directus files data...');
@@ -111,19 +77,37 @@ exports.sourceNodes = async ({ boundActionCreators, getNode, store, cache, creat
     console.log(`gatsby-source-directus`.cyan, 'Fetching Directus tables data...');
 
     // Fetch all the tables with data from Directus in a raw format
-    const allCollectionsData = await fetcher.getAllCollectionsData();
+    const allCollectionsData = await fetcher.getAllCollections();
 
-    console.log(`gatsby-source-directus`.blue, 'success'.green, `Fetched`, allCollectionsData.length.toString().yellow, `tables from Directus.`)
+    console.log(
+        `gatsby-source-directus`.blue,
+        'success'.green,
+        `Fetched`,
+        allCollectionsData.length.toString().yellow,
+        `tables from Directus.`,
+    );
 
-    for (let collectionData of allCollectionsData) {
+    allCollectionsData.map(async collectionData => {
         const collectionNode = CollectionNode(collectionData);
         await createNode(collectionNode);
-        let collectionItems = await fetcher.getAllItemsForCollection(collectionData.collection);
-        console.log(`gatsby-source-directus`.blue, 'success'.green, `Fetched`, collectionItems.length.toString().cyan, `items for `, collectionData.collection.cyan, ` table...`)
+        let collectionItems = await fetcher.getItemsForCollection(collectionData.collection);
+        console.log(
+            `gatsby-source-directus`.blue,
+            'success'.green,
+            `Fetched`,
+            collectionItems.length.toString().cyan,
+            `items for `,
+            collectionData.collection.cyan,
+            ` table...`,
+        );
 
         // Get the name for this node type
         let name = getNodeTypeNameForCollection(collectionData.collection, nameExceptions);
-        console.log(`gatsby-source-directus`.blue, 'info'.cyan, `Generating Directus${name} node type...`);
+        console.log(
+            `gatsby-source-directus`.blue,
+            'info'.cyan,
+            `Generating Directus${name} node type...`,
+        );
 
         // We're creating a separate Item Type for every table
         let ItemNode = createCollectionItemFactory(name, []);
@@ -139,11 +123,19 @@ exports.sourceNodes = async ({ boundActionCreators, getNode, store, cache, creat
                 // Pass it to Gatsby to create a node
                 await createNode(collectionItemNode);
             }
-            console.log(`gatsby-source-directus`.blue, `success`.green, `Directus${name} node generated`);
+            console.log(
+                `gatsby-source-directus`.blue,
+                `success`.green,
+                `Directus${name} node generated`,
+            );
         } else {
-            console.log(`gatsby-source-directus`.blue, `warning`.yellow, `${collectionData.collection} table has no rows. Skipping...`);
+            console.log(
+                `gatsby-source-directus`.blue,
+                `warning`.yellow,
+                `${collectionData.collection} table has no rows. Skipping...`,
+            );
         }
-    }
+    });
 
-    console.log("AFTER");
+    console.log('AFTER');
 };
