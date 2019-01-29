@@ -16,6 +16,7 @@ exports.sourceNodes = async (
 
     // Initialize the Fetcher class with API key and URL
     const fetcher = new Fetcher(url, project, email, password);
+    await fetcher.init();
 
     console.log(`gatsby-source-directus`.cyan, 'Fetching Directus files data...');
 

@@ -8,23 +8,40 @@ import Colors from 'colors'; // eslint-disable-line
  */
 export default class DirectusFetcher {
     constructor(url, project, email, password) {
+        this.email = email;
+        this.password = password;
         try {
             this.client = new DirectusSDK({
                 url,
                 project: project || '_',
             });
+        } catch (e) {
+            console.error(
+                '\ngatsby-source-directus'.blue,
+                'error'.red,
+                'gatsby-source-directus: Error initializing DirectusFetcher:\n',
+                JSON.stringify(e),
+            );
+        }
+    }
 
-            if (email && password) {
-                this.client.login({
-                    email,
-                    password,
+    /**
+     * Logs in to Directus if supplied with credentials
+     */
+    async init() {
+        try {
+            if (this.email && this.password) {
+                await this.client.login({
+                    email: this.email,
+                    password: this.password,
                 });
             }
         } catch (e) {
             console.error(
-                `\ngatsby-source-directus`.blue,
+                '\ngatsby-source-directus'.blue,
                 'error'.red,
-                `gatsby-source-directus: Error initializing DirectusFetcher:\n${e}`,
+                'gatsby-source-directus: Error logging in to Directus:\n',
+                JSON.stringify(e),
             );
         }
     }
@@ -44,9 +61,10 @@ export default class DirectusFetcher {
             return collections;
         } catch (e) {
             console.error(
-                `\ngatsby-source-directus`.blue,
+                '\ngatsby-source-directus'.blue,
                 'error'.red,
-                `gatsby-source-directus: Error while fetching Collections:\n${e}`,
+                'gatsby-source-directus: Error while fetching Collections:\n',
+                JSON.stringify(e),
             );
             return [];
         }
@@ -64,9 +82,10 @@ export default class DirectusFetcher {
             return relationsData.data;
         } catch (e) {
             console.error(
-                `\ngatsby-source-directus`.blue,
+                '\ngatsby-source-directus'.blue,
                 'error'.red,
-                `gatsby-source-directus: Error while fetching Relations:\n${e}`,
+                'gatsby-source-directus: Error while fetching Relations:\n',
+                JSON.stringify(e),
             );
             return [];
         }
@@ -81,9 +100,10 @@ export default class DirectusFetcher {
             return itemsData.data;
         } catch (e) {
             console.error(
-                `\ngatsby-source-directus`.blue,
+                '\ngatsby-source-directus'.blue,
                 'error'.red,
-                `gatsby-source-directus: Error while fetching collection ${collectionName}:\n${e}`,
+                `gatsby-source-directus: Error while fetching collection ${collectionName}:\n`,
+                JSON.stringify(e),
             );
             return [];
         }
@@ -100,9 +120,10 @@ export default class DirectusFetcher {
             return filesData.data;
         } catch (e) {
             console.error(
-                `\ngatsby-source-directus`.blue,
+                '\ngatsby-source-directus'.blue,
                 'error'.red,
-                `gatsby-source-directus: Error while fetching files:\n${e}`,
+                'gatsby-source-directus: Error while fetching files:\n',
+                JSON.stringify(e),
             );
             return [];
         }
