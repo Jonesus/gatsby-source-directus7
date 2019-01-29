@@ -5,7 +5,7 @@
   "main": "gatsby-node.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/iKonrad/gatsby-source-directus.git"
+    "url": "https://github.com/jonesus/gatsby-source-directus.git"
   },
   "scripts": {
     "build": "babel src --out-dir . --ignore __tests__",
@@ -13,18 +13,18 @@
     "watch": "babel -w src --out-dir . --ignore __tests__"
   },
   "bugs": {
-    "url": "https://github.com/iKonrad/gatsby-source-directus/issues"
+    "url": "https://github.com/jonesus/gatsby-source-directus/issues"
   },
   "author": "Konrad Jarosinski <konrad@jarosinski.uk>",
   "license": "MIT",
   "dependencies": {
-    "babel-runtime": "^6.26.0",
-    "babel-polyfill": "^6.26.0",
-    "directus-sdk-javascript": "^2.5.1",
-    "gatsby-source-filesystem": "^2.0.1-beta.7",
-    "gatsby-node-helpers": "^0.1.3",
-    "lodash": "^4.17.5",
-    "pluralize": "^7.0.0"
+    "@babel/runtime": "7.3.1",
+    "@directus/sdk-js": "5.1.4",
+    "babel-polyfill": "6.26.0",
+    "gatsby-node-helpers": "0.3.0",
+    "gatsby-source-filesystem": "2.0.18",
+    "lodash": "4.17.11",
+    "pluralize": "7.0.0"
   },
   "keywords": [
     "gatsby",
@@ -32,9 +32,11 @@
     "gatsby-source-plugin"
   ],
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-preset-env": "^1.6.1",
-    "colors": "^1.1.2",
-    "cross-env": "^5.0.5"
+    "@babel/cli": "7.2.3",
+    "@babel/core": "7.2.2",
+    "@babel/plugin-transform-runtime": "7.2.0",
+    "@babel/preset-env": "7.3.1",
+    "colors": "1.3.3",
+    "cross-env": "5.2.0"
   }
 }

@@ -1,5 +1,5 @@
 import 'babel-polyfill';
-import { RemoteInstance as Directus } from 'directus-sdk-javascript';
+import DirectusSDK from "@directus/sdk-js";
 import Colors from 'colors';
 
 export default class DirectusFetcher {
@@ -10,31 +10,25 @@ export default class DirectusFetcher {
         this.requestParams = requestParams;
         this.fileRequestParams = fileRequestParams;
         // Initialize client
-        this.client = new Directus({
+        this.client = new DirectusSDK({
             url: this.url,
-            accessToken: this.apiKey
         });
     }
 
-    async getAllTablesData() {
-        // Get all the tables available from Directus
-        let tablesData = await this.client.getTables({});
+    async getAllCollectionsData() {
+        // Get all the collections available from Directus
+        const collectionsData = await this.client.getCollections();
 
-        // Iterate through the tables and pull the data for each
-        if (tablesData.data === undefined) {
-            console.error(`\ngatsby-source-directus`.blue, 'error'.red, `gatsby-source-directus: An error occurred while fetching the table list.`, tablesData);
+        // Iterate through the collections and pull the data for each
+        if (collectionsData.data === undefined) {
+            console.error(`\ngatsby-source-directus`.blue, 'error'.red, `gatsby-source-directus: An error occurred while fetching the table list.`, collectionsData);
             return;
         }
 
-        let data = [];
+        const collections = collectionsData.data
+            .filter(collection => !collection.collection.startsWith("directus_"));
 
-        // Get details for all the tables
-        await Promise.all(tablesData.data.map(async (obj) => {
-            const tableData = await this.client.getTable(obj.name);
-            data.push(tableData.data);
-        }));
-
-        return data;
+        return collections;
     }
 
     async getAllFiles() {
@@ -49,8 +43,8 @@ export default class DirectusFetcher {
         return filesData.data;
     }
 
-    async getAllItemsForTable(name) {
-        const records = await this.client.getItems(name, this.requestParams);
+    async getAllItemsForCollection(name) {
+        const records = await this.client.getItems(name);
         return records.data;
     }
 }
