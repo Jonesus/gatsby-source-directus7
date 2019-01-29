@@ -24,7 +24,7 @@ module.exports = {
   },
   plugins: [
     {
-      resolve: 'gatsby-source-directus',
+      resolve: 'gatsby-source-directus7',
       options: {
         /**
          * The base URL of Directus.
