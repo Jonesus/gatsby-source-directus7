@@ -7,18 +7,14 @@ import Colors from 'colors'; // eslint-disable-line
  * via their JS SDK
  */
 export default class DirectusFetcher {
-    constructor(url, project, apiKey, email, password) {
+    constructor(url, project, email, password) {
         try {
             this.client = new DirectusSDK({
                 url,
                 project: project || '_',
             });
 
-            if (apiKey) {
-                this.client.login({
-                    token: apiKey,
-                });
-            } else if (email && password) {
+            if (email && password) {
                 this.client.login({
                     email,
                     password,

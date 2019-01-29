@@ -10,12 +10,12 @@ import Colors from 'colors'; // eslint-disable-line
 
 exports.sourceNodes = async (
     { actions, store, cache, createNodeId },
-    { url, project, apiKey, email, password, nameExceptions },
+    { url, project, email, password, nameExceptions },
 ) => {
     const { createNode } = actions;
 
     // Initialize the Fetcher class with API key and URL
-    const fetcher = new Fetcher(url, project, apiKey, email, password);
+    const fetcher = new Fetcher(url, project, email, password);
 
     console.log(`gatsby-source-directus`.cyan, 'Fetching Directus files data...');
 
