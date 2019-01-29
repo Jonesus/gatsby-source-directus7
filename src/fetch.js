@@ -81,8 +81,8 @@ export default class DirectusFetcher {
      */
     async getItemsForCollection(collectionName) {
         try {
-            const records = await this.client.getItems(collectionName);
-            return records.data;
+            const itemsData = await this.client.getItems(collectionName);
+            return itemsData.data;
         } catch (e) {
             console.error(
                 `\ngatsby-source-directus`.blue,
@@ -97,19 +97,18 @@ export default class DirectusFetcher {
      * Fetch all files from Directus
      */
     async getAllFiles() {
-        // TODO: check implementation
-        const filesData = await this.client.getFiles(this.fileRequestParams);
-
-        if (filesData.data === undefined) {
+        try {
+            // Directus SDK doesn't yet support fetching files via a
+            // dedicated method yet but this works just as well
+            const filesData = await this.client.get('files');
+            return filesData.data;
+        } catch (e) {
             console.error(
                 `\ngatsby-source-directus`.blue,
                 'error'.red,
-                `gatsby-source-directus: An error occurred while fetching the files.`,
-                filesData,
+                `gatsby-source-directus: Error while fetching files:\n${e}`,
             );
             return [];
         }
-
-        return filesData.data;
     }
 }

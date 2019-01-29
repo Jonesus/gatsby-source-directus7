@@ -1,3 +1,4 @@
+import { createRemoteFileNode } from 'gatsby-source-filesystem';
 import Fetcher from './fetch';
 import {
     CollectionNode,
@@ -6,73 +7,91 @@ import {
     getNodeTypeNameForCollection,
 } from './process';
 import Colors from 'colors'; // eslint-disable-line
-import { createRemoteFileNode } from 'gatsby-source-filesystem';
 
 exports.sourceNodes = async (
-    { boundActionCreators, getNode, store, cache, createNodeId },
+    { actions, getNode, store, cache, createNodeId },
     { url, project, apiKey, email, password, nameExceptions },
 ) => {
-    const { createNode } = boundActionCreators;
+    const { createNode } = actions;
 
     // Initialize the Fetcher class with API key and URL
     const fetcher = new Fetcher(url, project, apiKey, email, password);
 
-    /*
     console.log(`gatsby-source-directus`.cyan, 'Fetching Directus files data...');
 
     const allFilesData = await fetcher.getAllFiles();
 
-    console.log(`gatsby-source-directus`.blue, 'success'.green, `Fetched`, allFilesData.length.toString().yellow, `files from Directus.`);
+    console.log(
+        `gatsby-source-directus`.blue,
+        'success'.green,
+        `Fetched`,
+        allFilesData.length.toString().yellow,
+        `files from Directus.`,
+    );
     console.log(`gatsby-source-directus`.cyan, 'Downloading Directus files...');
 
-    let filesDownloaded = 0,
-        allFiles = [];
+    const allFiles = [];
 
-    for (let fileData of allFilesData) {
-        const fileNode = FileNode(fileData);
-        let localFileNode
+    await Promise.all(
+        allFilesData.map(async fileData => {
+            const fileNode = FileNode(fileData);
+            let localFileNode;
 
-        try {
-            localFileNode = await createRemoteFileNode({
-                url: protocol + url + fileNode.url,
-                store,
-                cache,
-                createNode,
-                createNodeId,
-                auth: _auth,
-            })
-        } catch (e) {
-            console.error(`\ngatsby-source-directus`.blue, 'error'.red, `gatsby-source-directus: An error occurred while downloading the files.`, e);
-        }
+            try {
+                localFileNode = await createRemoteFileNode({
+                    url: fileNode.data.full_url,
+                    store,
+                    cache,
+                    createNode,
+                    createNodeId,
+                });
+            } catch (e) {
+                console.error(
+                    `\ngatsby-source-directus`.blue,
+                    'error'.red,
+                    `gatsby-source-directus: An error occurred while downloading the files.`,
+                    e,
+                );
+            }
 
-        if (localFileNode) {
-            filesDownloaded++;
-            fileNode.localFile___NODE = localFileNode.id;
+            if (localFileNode) {
+                fileNode.localFile___NODE = localFileNode.id;
 
-            // When `gatsby-source-filesystem` creates the file nodes, all reference
-            // to the original data source is wiped out. This object links the
-            // directus reference (that's used by other objects to reference files)
-            // to the gatsby reference (that's accessible in GraphQL queries). Then,
-            // when each table row is created (in ./process.js), if a file is on a row
-            // we find it in this array and put the Gatsby URL on the directus node.
-            //
-            // This is a hacky solution, but it does the trick for very basic raw file capture
-            // TODO see if we can implement gatsby-transformer-sharp style queries
-            allFiles.push({
-                directus: fileNode,
-                gatsby: localFileNode
-            });
-        }
+                // When `gatsby-source-filesystem` creates the file nodes, all reference
+                // to the original data source is wiped out. This object links the
+                // directus reference (that's used by other objects to reference files)
+                // to the gatsby reference (that's accessible in GraphQL queries). Then,
+                // when each table row is created (in ./process.js), if a file is on a row
+                // we find it in this array and put the Gatsby URL on the directus node.
+                //
+                // This is a hacky solution, but it does the trick for very basic raw file capture
+                // TODO see if we can implement gatsby-transformer-sharp style queries
+                allFiles.push({
+                    directus: fileNode,
+                    gatsby: localFileNode,
+                });
+                await createNode(fileNode);
+            }
+        }),
+    );
 
-        await createNode(fileNode);
-    }
-
-    if (filesDownloaded === allFilesData.length) {
-        console.log(`gatsby-source-directus`.blue, 'success'.green, `Downloaded all`, filesDownloaded.toString().yellow, `files from Directus.`);
+    if (allFiles.length === allFilesData.length) {
+        console.log(
+            `gatsby-source-directus`.blue,
+            'success'.green,
+            `Downloaded all`,
+            allFiles.length.toString().yellow,
+            `files from Directus.`,
+        );
     } else {
-        console.log(`gatsby-source-directus`.blue, `warning`.yellow, `skipped`, (filesDownloaded - allFilesData.length).toString().yellow, 'files from downloading');
+        console.log(
+            `gatsby-source-directus`.blue,
+            `warning`.yellow,
+            `skipped`,
+            (allFilesData.length - allFiles.length).toString().yellow,
+            'files from downloading',
+        );
     }
-    */
 
     console.log(`gatsby-source-directus`.cyan, 'Fetching Directus tables data...');
 
@@ -90,7 +109,7 @@ exports.sourceNodes = async (
     allCollectionsData.map(async collectionData => {
         const collectionNode = CollectionNode(collectionData);
         await createNode(collectionNode);
-        let collectionItems = await fetcher.getItemsForCollection(collectionData.collection);
+        const collectionItems = await fetcher.getItemsForCollection(collectionData.collection);
         console.log(
             `gatsby-source-directus`.blue,
             'success'.green,
@@ -102,7 +121,7 @@ exports.sourceNodes = async (
         );
 
         // Get the name for this node type
-        let name = getNodeTypeNameForCollection(collectionData.collection, nameExceptions);
+        const name = getNodeTypeNameForCollection(collectionData.collection, nameExceptions);
         console.log(
             `gatsby-source-directus`.blue,
             'info'.cyan,
@@ -110,11 +129,11 @@ exports.sourceNodes = async (
         );
 
         // We're creating a separate Item Type for every table
-        let ItemNode = createCollectionItemFactory(name, []);
+        const ItemNode = createCollectionItemFactory(name, []);
 
         if (collectionItems && collectionItems.length > 0) {
             // Get all the items for the table above and create a gatsby node for it
-            for (let collectionItemData of collectionItems) {
+            collectionItems.map(async collectionItemData => {
                 // Create a Table Item node based on the API response
                 const collectionItemNode = ItemNode(collectionItemData, {
                     parent: collectionNode.id,
@@ -122,7 +141,7 @@ exports.sourceNodes = async (
 
                 // Pass it to Gatsby to create a node
                 await createNode(collectionItemNode);
-            }
+            });
             console.log(
                 `gatsby-source-directus`.blue,
                 `success`.green,

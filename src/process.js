@@ -9,7 +9,7 @@ const COLLECTION_NODE_TYPE = `Collection`;
 const FILE_NODE_TYPE = `File`;
 
 /**
- *  Removes unnecessary fields from the response
+ * Removes unnecessary fields from the response
  */
 const sanitizeDirectusFields = node => {
     return node;
@@ -52,25 +52,25 @@ export const createCollectionItemFactory = (name, allFiles) => {
  * Also, it checks if there's an exception to this name to use instead
  */
 export const getNodeTypeNameForCollection = (name, exceptions) => {
+    let nodeName = name;
     // If there's an exception for this name, use it instead
     // Otherwise, generate a new one
     if (
         exceptions !== undefined &&
         Object.keys(exceptions).length > 0 &&
-        exceptions[name] !== undefined
+        exceptions[nodeName] !== undefined
     ) {
-        return exceptions[name];
+        return exceptions[nodeName];
     }
 
     // If the name is plural, use the Pluralize plugin to try make it singular
     // This is to conform to the Gatsby convention of using singular names in their node types
-    let typeName;
-    if (Pluralize.isPlural(name)) {
-        typeName = Pluralize.singular(name);
+    if (Pluralize.isPlural(nodeName)) {
+        nodeName = Pluralize.singular(nodeName);
     }
 
     // Make the first letter upperace as per Gatsby's convention
-    typeName = name.charAt(0).toUpperCase() + name.slice(1);
+    nodeName = nodeName.charAt(0).toUpperCase() + nodeName.slice(1);
 
-    return typeName;
+    return nodeName;
 };
