@@ -9,7 +9,7 @@ import {
 import Colors from 'colors'; // eslint-disable-line
 
 exports.sourceNodes = async (
-    { actions, getNode, store, cache, createNodeId },
+    { actions, store, cache, createNodeId },
     { url, project, apiKey, email, password, nameExceptions },
 ) => {
     const { createNode } = actions;
