@@ -1,4 +1,4 @@
-# gatsby-source-directus
+# gatsby-source-directus7
 
 Source plugin for pulling data into [Gatsby](https://github.com/gatsbyjs) from [Directus CMS](https://getdirectus.com/). Based heavily on [iKonrad's original plugin](https://github.com/iKonrad/gatsby-source-directus/).
 
@@ -71,14 +71,14 @@ If for some reason, the generated name doesn't seem right, you can overwrite the
 
 ### Example plugin with Gatsby's `createPages`
 
-This example assumes that you have created a `posts` collection in Directus with `title`, `author` and `content` fields.
-It will use `src/templates/post.jsx` file as your template file.
+This example assumes that you have created a `posts` collection in Directus with `title`, `author` and `content` fields, and a barebones Gatsby app. Add the following files to your Gatsby project:
 
 `./gatsby-node.js`
 
 ```javascript
 const path = require('path');
 
+// Gatsby function that runs during build after generating GraphQL store
 exports.createPages = async ({ actions, graphql }) => {
   const { createPage } = actions;
   try {
@@ -103,16 +103,17 @@ exports.createPages = async ({ actions, graphql }) => {
           path: url,
           component: path.resolve('src/templates/post.jsx'),
           context: {
+            // Used as a query argument in the component below
             id: node.directusId,
           },
         });
-        console.log(`Generated post '${url}'`);
+        console.log(`Generated post '${node.title}' to path '/${url}'`);
       } catch (error) {
-        console.error(`Failed to generate page '${node.title}': ${error}`);
+        console.error(`Failed to generate post '${node.title}': ${error}`);
       }
     });
   } catch (error) {
-    console.error(`GraphQL query returned errors: ${error}`);
+    console.error(`GraphQL query returned error: ${error}`);
   }
 };
 ```
@@ -123,6 +124,7 @@ exports.createPages = async ({ actions, graphql }) => {
 import React from 'react';
 import { graphql } from 'gatsby';
 
+// Basic post component
 export default ({ data }) => {
   const post = data.directusPost;
   return (
@@ -134,6 +136,7 @@ export default ({ data }) => {
   );
 };
 
+// Query to be ran on build, passes resulting JSON as 'data' prop
 export const query = graphql`
   query($id: Int!) {
     directusPost(directusId: { eq: $id }) {
