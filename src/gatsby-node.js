@@ -1,6 +1,13 @@
 import { createRemoteFileNode } from 'gatsby-source-filesystem';
 import Fetcher from './fetch';
-import { FileNode, mapRelations, createNodesFromEntities, prepareNodes } from './process';
+import {
+    mapRelations,
+    createNodesFromEntities,
+    prepareNodes,
+    prepareFileNodes,
+    createNodesFromFiles,
+    mapFilesToNodes,
+} from './process';
 import Colors from 'colors'; // eslint-disable-line
 
 exports.sourceNodes = async (
@@ -16,6 +23,7 @@ exports.sourceNodes = async (
     console.log(`gatsby-source-directus`.cyan, 'Fetching Directus files data...');
 
     const allFilesData = await fetcher.getAllFiles();
+    console.log(JSON.stringify(allFilesData, null, 2));
 
     console.log(
         `gatsby-source-directus`.blue,
@@ -26,57 +34,23 @@ exports.sourceNodes = async (
     );
     console.log(`gatsby-source-directus`.cyan, 'Downloading Directus files...');
 
-    const allFiles = [];
-
-    await Promise.all(
-        allFilesData.map(async fileData => {
-            const fileNode = FileNode(fileData);
-            let localFileNode;
-
-            try {
-                localFileNode = await createRemoteFileNode({
-                    url: fileNode.data.full_url,
-                    store,
-                    cache,
-                    createNode,
-                    createNodeId,
-                });
-            } catch (e) {
-                console.error(
-                    `\ngatsby-source-directus`.blue,
-                    'error'.red,
-                    `gatsby-source-directus: An error occurred while downloading the files.`,
-                    e,
-                );
-            }
-
-            if (localFileNode) {
-                fileNode.localFile___NODE = localFileNode.id;
-
-                // When `gatsby-source-filesystem` creates the file nodes, all reference
-                // to the original data source is wiped out. This object links the
-                // directus reference (that's used by other objects to reference files)
-                // to the gatsby reference (that's accessible in GraphQL queries). Then,
-                // when each table row is created (in ./process.js), if a file is on a row
-                // we find it in this array and put the Gatsby URL on the directus node.
-                //
-                // This is a hacky solution, but it does the trick for very basic raw file capture
-                // TODO see if we can implement gatsby-transformer-sharp style queries
-                allFiles.push({
-                    directus: fileNode,
-                    gatsby: localFileNode,
-                });
-                await createNode(fileNode);
-            }
+    const nodeFilesData = prepareFileNodes(allFilesData);
+    const nodeFiles = await createNodesFromFiles(nodeFilesData, createNode, async f =>
+        createRemoteFileNode({
+            url: f.data.full_url,
+            store,
+            cache,
+            createNode,
+            createNodeId,
         }),
     );
 
-    if (allFiles.length === allFilesData.length) {
+    if (nodeFiles.length === allFilesData.length) {
         console.log(
             `gatsby-source-directus`.blue,
             'success'.green,
             `Downloaded all`,
-            allFiles.length.toString().yellow,
+            nodeFiles.length.toString().yellow,
             `files from Directus.`,
         );
     } else {
@@ -84,7 +58,7 @@ exports.sourceNodes = async (
             `gatsby-source-directus`.blue,
             `warning`.yellow,
             `skipped`,
-            (allFilesData.length - allFiles.length).toString().yellow,
+            (allFilesData.length - nodeFiles.length).toString().yellow,
             'files from downloading',
         );
     }
@@ -93,14 +67,18 @@ exports.sourceNodes = async (
 
     // Fetch all the tables with data from Directus in a raw format
     const allCollectionsData = await fetcher.getAllCollections();
+    console.log(JSON.stringify(allCollectionsData, null, 2));
+
     const entities = await fetcher.getAllEntities(allCollectionsData);
     const relations = await fetcher.getAllRelations();
     const nodeEntities = prepareNodes(entities);
-    const mappedEntities = mapRelations(nodeEntities, relations);
+    const relationMappedEntities = mapRelations(nodeEntities, relations);
+
+    const mappedEntities = mapFilesToNodes(nodeFiles, allCollectionsData, relationMappedEntities);
 
     //console.log(entities);
     //console.log(relations);
-    //console.log(JSON.stringify(mappedEntities, null, 2));
+    console.log(JSON.stringify(mappedEntities, null, 2));
     await createNodesFromEntities(mappedEntities, createNode);
 
     /*
@@ -165,5 +143,5 @@ exports.sourceNodes = async (
         }),
     );
     */
-    console.log('AFTER');
+    console.log('gatsby-source-directus'.blue, 'success'.green, 'All done!');
 };

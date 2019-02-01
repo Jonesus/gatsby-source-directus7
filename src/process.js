@@ -5,10 +5,6 @@ const { createNodeFactory } = createNodeHelpers({
     typePrefix: 'Directus',
 });
 
-const FILE_NODE_TYPE = `File`;
-
-const containsNullValue = obj => Object.keys(obj).some(key => obj[key] === null);
-
 /**
  * Transforms the table name into a Gatsby Node Type name
  * All this does, is making the first letter uppercase and singularizing it if possible.
@@ -50,6 +46,55 @@ export const prepareNodes = entities => {
     });
     return newEntities;
 };
+
+/**
+ * Calls a node creation helper on each file
+ */
+export const prepareFileNodes = files => {
+    const generateFileNode = createNodeFactory('File');
+    return files.map(generateFileNode);
+};
+
+/**
+ * Calls both Gatsby's createNode and gatsby-source-filesystem's
+ * createRemoteFileNode on them. Returns an object with both of them,
+ * so that they can be linked into Directus's collections.
+ */
+export const createNodesFromFiles = (files, createNode, createRemoteFileNode) =>
+    Promise.all(
+        files.map(async f => {
+            let localFileNode;
+            try {
+                localFileNode = await createRemoteFileNode(f);
+            } catch (e) {
+                console.error(
+                    `\ngatsby-source-directus`.blue,
+                    'error'.red,
+                    `gatsby-source-directus: An error occurred while downloading the files.`,
+                    e,
+                );
+            }
+            if (localFileNode) {
+                f.localFile___NODE = localFileNode.id;
+                // When `gatsby-source-filesystem` creates the file nodes, all reference
+                // to the original data source is wiped out. This object links the
+                // directus reference (that's used by other objects to reference files)
+                // to the gatsby reference (that's accessible in GraphQL queries). Then,
+                // when each table row is created (in ./process.js), if a file is on a row
+                // we find it in this array and put the Gatsby URL on the directus node.
+                // This is a hacky solution, but it does the trick for very basic raw file capture
+                // TODO: see if we can implement gatsby-transformer-sharp style queries
+                await createNode(f);
+            }
+            return {
+                directus: f,
+                gatsby: localFileNode,
+            };
+        }),
+    );
+
+// Helper for the next function
+const containsNullValue = obj => Object.keys(obj).some(key => obj[key] === null);
 
 /**
  * Maps all relations between Directus entities. First we traverse
@@ -149,6 +194,36 @@ export const mapRelations = (entities, relations) => {
 };
 
 /**
+ * Do file magix
+ */
+export const mapFilesToNodes = (files, collections, entities) => {
+    const newEntities = entities;
+    // Figure out which Collections have fields that need to be
+    // mapped to files
+    const collectionsWithFiles = [];
+    collections.forEach(collection =>
+        Object.keys(collection.fields).forEach(field => {
+            if (collection.fields[field].type === 'file') {
+                collectionsWithFiles.push({
+                    collectionName: collection.collection,
+                    fieldName: field,
+                });
+            }
+        }),
+    );
+
+    // Map the right field in the right collection to a file node
+    collectionsWithFiles.forEach(c => {
+        newEntities[c.collectionName] = newEntities[c.collectionName].map(e => {
+            const targetFileId = e[c.fieldName];
+            const fileId = files.find(f => f.directus.directusId === targetFileId).gatsby.id;
+            return { ...e, [`${c.fieldName}___NODE`]: fileId };
+        });
+    });
+    return newEntities;
+};
+
+/**
  * Calls Gatsby's createNode on each item in entities
  */
 export const createNodesFromEntities = async (entities, createNode) => {
@@ -163,10 +238,6 @@ export const createNodesFromEntities = async (entities, createNode) => {
 const sanitizeDirectusFields = node => {
     return node;
 };
-
-export const FileNode = createNodeFactory(FILE_NODE_TYPE, node => {
-    return sanitizeDirectusFields(node);
-});
 
 // A little wrapper for the createItemFactory to not have to import the gatsby-node-helpers in the main file
 export const createCollectionItemFactory = (name, allFiles) => {
