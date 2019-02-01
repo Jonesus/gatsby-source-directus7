@@ -71,6 +71,32 @@ export default class DirectusFetcher {
     }
 
     /**
+     * Fetch all items for all Collections described in function
+     * parameter. Returns an object with each Collection name as
+     * key and list of Collection Items as values.
+     */
+    async getAllEntities(collections) {
+        const entities = {};
+        await Promise.all(
+            collections.map(async collection => {
+                const collectionName = collection.collection;
+                try {
+                    const items = await this.getItemsForCollection(collectionName);
+                    entities[collectionName] = items;
+                } catch (e) {
+                    console.error(
+                        '\ngatsby-source-directus'.blue,
+                        'error'.red,
+                        `gatsby-source-directus: Error while fetching entities for Collection ${collectionName}:\n`,
+                        e,
+                    );
+                }
+            }),
+        );
+        return entities;
+    }
+
+    /**
      * Fetch all Relations from Directus excluding system
      * relations (ie. those prefixed with "directus_")
      */

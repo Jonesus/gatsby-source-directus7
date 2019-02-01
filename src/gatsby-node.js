@@ -5,6 +5,10 @@ import {
     FileNode,
     createCollectionItemFactory,
     getNodeTypeNameForCollection,
+    mapManyToOne,
+    createNodesFromEntities,
+    standardizeKeys,
+    prepareNodes,
 } from './process';
 import Colors from 'colors'; // eslint-disable-line
 
@@ -98,7 +102,17 @@ exports.sourceNodes = async (
 
     // Fetch all the tables with data from Directus in a raw format
     const allCollectionsData = await fetcher.getAllCollections();
+    const entities = await fetcher.getAllEntities(allCollectionsData);
+    const relations = await fetcher.getAllRelations();
+    const nodeEntities = prepareNodes(entities);
+    const mappedEntities = mapManyToOne(nodeEntities, relations);
 
+    //console.log(entities);
+    //console.log(relations);
+    //console.log(JSON.stringify(mappedEntities, null, 2));
+    await createNodesFromEntities(mappedEntities, createNode);
+
+    /*
     console.log(
         `gatsby-source-directus`.blue,
         'success'.green,
@@ -140,6 +154,7 @@ exports.sourceNodes = async (
                     const collectionItemNode = ItemNode(collectionItemData, {
                         parent: collectionNode.id,
                     });
+                    console.log(collectionItemNode);
 
                     // Pass it to Gatsby to create a node
                     await createNode(collectionItemNode);
@@ -158,6 +173,6 @@ exports.sourceNodes = async (
             }
         }),
     );
-
+    */
     console.log('AFTER');
 };
