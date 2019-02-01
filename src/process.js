@@ -1,5 +1,11 @@
 import createNodeHelpers from 'gatsby-node-helpers';
 import Pluralize from 'pluralize';
+import Colors from 'colors'; // eslint-disable-line
+
+export const info = msg => console.log('gatsby-source-directus'.blue, 'info'.cyan, msg);
+export const warn = msg => console.log('gatsby-source-directus'.blue, 'warning'.yellow, msg);
+export const error = msg => console.error('gatsby-source-directus'.blue, 'error'.red, msg);
+export const success = msg => console.log('gatsby-source-directus'.blue, 'success'.green, msg);
 
 const { createNodeFactory } = createNodeHelpers({
     typePrefix: 'Directus',
@@ -10,27 +16,15 @@ const { createNodeFactory } = createNodeHelpers({
  * All this does, is making the first letter uppercase and singularizing it if possible.
  * Also, it checks if there's an exception to this name to use instead
  */
-export const getNodeTypeNameForCollection = (name, exceptions) => {
+export const getNodeTypeNameForCollection = name => {
     let nodeName = name;
-    // If there's an exception for this name, use it instead
-    // Otherwise, generate a new one
-    if (
-        exceptions !== undefined &&
-        Object.keys(exceptions).length > 0 &&
-        exceptions[nodeName] !== undefined
-    ) {
-        return exceptions[nodeName];
-    }
-
     // If the name is plural, use the Pluralize plugin to try make it singular
     // This is to conform to the Gatsby convention of using singular names in their node types
     if (Pluralize.isPlural(nodeName)) {
         nodeName = Pluralize.singular(nodeName);
     }
-
     // Make the first letter upperace as per Gatsby's convention
     nodeName = nodeName.charAt(0).toUpperCase() + nodeName.slice(1);
-
     return nodeName;
 };
 
@@ -40,7 +34,7 @@ export const getNodeTypeNameForCollection = (name, exceptions) => {
 export const prepareNodes = entities => {
     const newEntities = entities;
     Object.keys(entities).forEach(entity => {
-        const name = getNodeTypeNameForCollection(entity, []);
+        const name = getNodeTypeNameForCollection(entity);
         const generateItemNode = createNodeFactory(name);
         newEntities[entity] = newEntities[entity].map(item => generateItemNode(item));
     });
@@ -67,23 +61,10 @@ export const createNodesFromFiles = (files, createNode, createRemoteFileNode) =>
             try {
                 localFileNode = await createRemoteFileNode(f);
             } catch (e) {
-                console.error(
-                    `\ngatsby-source-directus`.blue,
-                    'error'.red,
-                    `gatsby-source-directus: An error occurred while downloading the files.`,
-                    e,
-                );
+                error(`Error while downloading files: ${e}`);
             }
             if (localFileNode) {
                 f.localFile___NODE = localFileNode.id;
-                // When `gatsby-source-filesystem` creates the file nodes, all reference
-                // to the original data source is wiped out. This object links the
-                // directus reference (that's used by other objects to reference files)
-                // to the gatsby reference (that's accessible in GraphQL queries). Then,
-                // when each table row is created (in ./process.js), if a file is on a row
-                // we find it in this array and put the Gatsby URL on the directus node.
-                // This is a hacky solution, but it does the trick for very basic raw file capture
-                // TODO: see if we can implement gatsby-transformer-sharp style queries
                 await createNode(f);
             }
             return {
@@ -112,11 +93,7 @@ export const mapRelations = (entities, relations) => {
             const fo = relation.field_one;
             const cm = relation.collection_many;
             const fm = relation.field_many;
-            console.log(
-                'gatsby-source-directus'.blue,
-                'info'.cyan,
-                `Found One-To-Many relation: ${co} -> ${cm}`,
-            );
+            info(`Found One-To-Many relation: ${co} -> ${cm}`);
 
             // Replace each "One" entity with one that contains relations
             // to "Many" entities
@@ -149,21 +126,15 @@ export const mapRelations = (entities, relations) => {
     Object.keys(junctionRelations).forEach(junction => {
         const junctions = junctionRelations[junction];
         if (junctions.length !== 2) {
-            console.error(
-                '\ngatsby-source-directus'.blue,
-                'error'.red,
-                'gatsby-source-directus: Error while building relations for',
-                junctions[0].collection_many,
-                'please check your Directus configuration.',
+            error(
+                'Error while building relations for' +
+                    `${junctions[0].collection_many},` +
+                    'please check your Directus configuration.',
             );
         }
         const firstCol = junctions[0].collection_one;
         const secondCol = junctions[1].collection_one;
-        console.log(
-            'gatsby-source-directus'.blue,
-            'info'.cyan,
-            `Found Many-To-Many relation: ${firstCol} <-> ${secondCol}`,
-        );
+        info(`Found Many-To-Many relation: ${firstCol} <-> ${secondCol}`);
         // Add relations to both directions
         junctions.forEach(j =>
             mappedEntities[j.collection_many].forEach(relation => {
@@ -190,11 +161,18 @@ export const mapRelations = (entities, relations) => {
             }),
         );
     });
+
+    // Remove junction collections as they don't contain relevant data to user anymore
+    info('Cleaning junction collections...');
+    Object.keys(junctionRelations).forEach(junction => {
+        delete mappedEntities[junction];
+    });
     return mappedEntities;
 };
 
 /**
- * Do file magix
+ * Iterates through files served by Directus and maps them to all
+ * the Collections's Items which are supposed to have an attachment.
  */
 export const mapFilesToNodes = (files, collections, entities) => {
     const newEntities = entities;
@@ -214,6 +192,7 @@ export const mapFilesToNodes = (files, collections, entities) => {
 
     // Map the right field in the right collection to a file node
     collectionsWithFiles.forEach(c => {
+        info(`Mapping files for ${c.collectionName}...`);
         newEntities[c.collectionName] = newEntities[c.collectionName].map(e => {
             const targetFileId = e[c.fieldName];
             const fileId = files.find(f => f.directus.directusId === targetFileId).gatsby.id;
@@ -229,35 +208,5 @@ export const mapFilesToNodes = (files, collections, entities) => {
 export const createNodesFromEntities = async (entities, createNode) => {
     Object.keys(entities).map(async entity => {
         await Promise.all(entities[entity].map(item => createNode(item)));
-    });
-};
-
-/**
- * Removes unnecessary fields from the response
- */
-const sanitizeDirectusFields = node => {
-    return node;
-};
-
-// A little wrapper for the createItemFactory to not have to import the gatsby-node-helpers in the main file
-export const createCollectionItemFactory = (name, allFiles) => {
-    return createNodeFactory(name, node => {
-        const cleanNode = sanitizeDirectusFields(node);
-
-        // For each property on each row, check if it's a "file" property. If it is, find the file object
-        // from `gatsby-source-filesystem` and add the URL to the property's object
-        Object.keys(cleanNode).forEach(key => {
-            if (node[key] && node[key].meta && node[key].meta.type === 'item') {
-                const itemName = node[key].data && node[key].data.name;
-                const file = allFiles.find(
-                    fileCandidate => fileCandidate.directus.name === itemName,
-                );
-                if (file) {
-                    cleanNode[key].file___NODE = file.gatsby.id;
-                }
-            }
-        });
-
-        return cleanNode;
     });
 };

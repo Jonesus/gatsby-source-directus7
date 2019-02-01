@@ -1,6 +1,7 @@
 import 'babel-polyfill';
 import DirectusSDK from '@directus/sdk-js';
 import Colors from 'colors'; // eslint-disable-line
+import { error } from './process';
 
 /**
  * Class with methods for fetching data from Directus
@@ -16,12 +17,7 @@ export default class DirectusFetcher {
                 project: project || '_',
             });
         } catch (e) {
-            console.error(
-                '\ngatsby-source-directus'.blue,
-                'error'.red,
-                'gatsby-source-directus: Error initializing DirectusFetcher:\n',
-                JSON.stringify(e),
-            );
+            error(`Error initializing DirectusFetcher: ${e}`);
         }
     }
 
@@ -37,12 +33,7 @@ export default class DirectusFetcher {
                 });
             }
         } catch (e) {
-            console.error(
-                '\ngatsby-source-directus'.blue,
-                'error'.red,
-                'gatsby-source-directus: Error logging in to Directus:\n',
-                JSON.stringify(e),
-            );
+            error(`Error logging in to Directus: ${e}`);
         }
     }
 
@@ -60,12 +51,7 @@ export default class DirectusFetcher {
             );
             return collections;
         } catch (e) {
-            console.error(
-                '\ngatsby-source-directus'.blue,
-                'error'.red,
-                'gatsby-source-directus: Error while fetching Collections:\n',
-                JSON.stringify(e),
-            );
+            console.error(`Error fetching Collections: ${e}`);
             return [];
         }
     }
@@ -84,12 +70,7 @@ export default class DirectusFetcher {
                     const items = await this.getItemsForCollection(collectionName);
                     entities[collectionName] = items;
                 } catch (e) {
-                    console.error(
-                        '\ngatsby-source-directus'.blue,
-                        'error'.red,
-                        `gatsby-source-directus: Error while fetching entities for Collection ${collectionName}:\n`,
-                        e,
-                    );
+                    error(`Error fetching entities for Collection ${collectionName}: ${e}`);
                 }
             }),
         );
@@ -107,12 +88,7 @@ export default class DirectusFetcher {
             });
             return relationsData.data;
         } catch (e) {
-            console.error(
-                '\ngatsby-source-directus'.blue,
-                'error'.red,
-                'gatsby-source-directus: Error while fetching Relations:\n',
-                JSON.stringify(e),
-            );
+            error(`Error fetching Relations: ${e}`);
             return [];
         }
     }
@@ -125,12 +101,7 @@ export default class DirectusFetcher {
             const itemsData = await this.client.getItems(collectionName);
             return itemsData.data;
         } catch (e) {
-            console.error(
-                '\ngatsby-source-directus'.blue,
-                'error'.red,
-                `gatsby-source-directus: Error while fetching collection ${collectionName}:\n`,
-                JSON.stringify(e),
-            );
+            error(`Error while fetching collection ${collectionName}: ${e}`);
             return [];
         }
     }
@@ -145,12 +116,7 @@ export default class DirectusFetcher {
             const filesData = await this.client.get('files');
             return filesData.data;
         } catch (e) {
-            console.error(
-                '\ngatsby-source-directus'.blue,
-                'error'.red,
-                'gatsby-source-directus: Error while fetching files:\n',
-                JSON.stringify(e),
-            );
+            error(`gatsby-source-directus: Error while fetching files: ${e}`);
             return [];
         }
     }
