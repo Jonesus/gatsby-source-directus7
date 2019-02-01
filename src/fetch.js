@@ -1,6 +1,4 @@
-import 'babel-polyfill';
 import DirectusSDK from '@directus/sdk-js';
-import Colors from 'colors'; // eslint-disable-line
 import { error } from './process';
 
 /**
