@@ -1,15 +1,6 @@
 import { createRemoteFileNode } from 'gatsby-source-filesystem';
 import Fetcher from './fetch';
-import {
-    CollectionNode,
-    FileNode,
-    createCollectionItemFactory,
-    getNodeTypeNameForCollection,
-    mapManyToOne,
-    createNodesFromEntities,
-    standardizeKeys,
-    prepareNodes,
-} from './process';
+import { FileNode, mapRelations, createNodesFromEntities, prepareNodes } from './process';
 import Colors from 'colors'; // eslint-disable-line
 
 exports.sourceNodes = async (
@@ -105,7 +96,7 @@ exports.sourceNodes = async (
     const entities = await fetcher.getAllEntities(allCollectionsData);
     const relations = await fetcher.getAllRelations();
     const nodeEntities = prepareNodes(entities);
-    const mappedEntities = mapManyToOne(nodeEntities, relations);
+    const mappedEntities = mapRelations(nodeEntities, relations);
 
     //console.log(entities);
     //console.log(relations);

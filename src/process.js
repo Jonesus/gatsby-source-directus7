@@ -5,8 +5,9 @@ const { createNodeFactory } = createNodeHelpers({
     typePrefix: 'Directus',
 });
 
-const COLLECTION_NODE_TYPE = `Collection`;
 const FILE_NODE_TYPE = `File`;
+
+const containsNullValue = obj => Object.keys(obj).some(key => obj[key] === null);
 
 /**
  * Transforms the table name into a Gatsby Node Type name
@@ -51,16 +52,26 @@ export const prepareNodes = entities => {
 };
 
 /**
- * Maps stuff
+ * Maps all relations between Directus entities. First we traverse
+ * through every relation, and form Many-To-Ones straight away while
+ * gathering up all Many-To-Many relations. Afterwards we can iterate
+ * over each Many-To-Many relation and build the correct GraphQL nodes.
  */
-export const mapManyToOne = (entities, relations) => {
+export const mapRelations = (entities, relations) => {
     const mappedEntities = entities;
+    const junctionRelations = {};
     relations.forEach(relation => {
         if (relation.junction_field === null) {
+            // Many-to-one, build the relation right away
             const co = relation.collection_one;
             const fo = relation.field_one;
             const cm = relation.collection_many;
             const fm = relation.field_many;
+            console.log(
+                'gatsby-source-directus'.blue,
+                'info'.cyan,
+                `Found One-To-Many relation: ${co} -> ${cm}`,
+            );
 
             // Replace each "One" entity with one that contains relations
             // to "Many" entities
@@ -78,7 +89,61 @@ export const mapManyToOne = (entities, relations) => {
                 delete newEntity[fm];
                 return newEntity;
             });
+        } else if (!containsNullValue(relation)) {
+            // Many-to-many, need to find the pair relations before processing
+            const cm = relation.collection_many;
+            if (junctionRelations[cm] === undefined) {
+                junctionRelations[cm] = [relation];
+            } else {
+                junctionRelations[cm].push(relation);
+            }
         }
+    });
+
+    // Form the many-to-many relationships
+    Object.keys(junctionRelations).forEach(junction => {
+        const junctions = junctionRelations[junction];
+        if (junctions.length !== 2) {
+            console.error(
+                '\ngatsby-source-directus'.blue,
+                'error'.red,
+                'gatsby-source-directus: Error while building relations for',
+                junctions[0].collection_many,
+                'please check your Directus configuration.',
+            );
+        }
+        const firstCol = junctions[0].collection_one;
+        const secondCol = junctions[1].collection_one;
+        console.log(
+            'gatsby-source-directus'.blue,
+            'info'.cyan,
+            `Found Many-To-Many relation: ${firstCol} <-> ${secondCol}`,
+        );
+        // Add relations to both directions
+        junctions.forEach(j =>
+            mappedEntities[j.collection_many].forEach(relation => {
+                // Finds the correct entity and adds the id of related
+                // item to the relation list
+                const targetCol = j.collection_one;
+                const anotherCol = targetCol === firstCol ? secondCol : firstCol;
+                const targetItemId = relation[j.field_many];
+                const targetKey = `${j.field_one}___NODE`;
+                const targetVal = mappedEntities[anotherCol].find(
+                    e => e.directusId === relation[j.junction_field],
+                ).id;
+                mappedEntities[targetCol] = mappedEntities[targetCol].map(item =>
+                    item.directusId === targetItemId
+                        ? {
+                              ...item,
+                              [targetKey]:
+                                  item[targetKey] === undefined
+                                      ? [targetVal]
+                                      : [...item[targetKey], targetVal],
+                          }
+                        : item,
+                );
+            }),
+        );
     });
     return mappedEntities;
 };
