@@ -1,14 +1,16 @@
 # gatsby-source-directus7
 
-Source plugin for pulling data into [Gatsby](https://github.com/gatsbyjs) from [Directus CMS](https://getdirectus.com/). Based heavily on [iKonrad's original plugin](https://github.com/iKonrad/gatsby-source-directus/).
+Source plugin for pulling data into [Gatsby](https://github.com/gatsbyjs) from [Directus CMS](https://getdirectus.com/). Inspired by [iKonrad's original plugin](https://github.com/iKonrad/gatsby-source-directus/).
 
 ## Features
 
-This plugin pulls all your Directus Collections and creates Gatsby nodes for it.
+This plugin pulls all your Directus Collections and creates Gatsby nodes for them. It maps through all the Many-To-One and Many-To-Many -relationships between your Collections, and links them for extra comfy GraphQL querying.
 
-For example, if you have a `Posts` collection, you'll get access to `allDirectusPost` and `directusPost` queries which return Items in the Collection.
+For example, if you have a `Posts` collection, you'll get access to `allDirectusPost` and `directusPost` queries which return Items in the Collection. If your `Posts` have a relation to a `Categories` -collection with the same field name, the `Category` objects can be found right in the `Post` GraphQL object.
 
-It works well with Gatsby's `createPages` function if you want to dynamically create Blog posts from Directus, for instance.
+This plugin uses [gatsby-source-filesystem](https://www.gatsbyjs.org/packages/gatsby-source-filesystem/) to download all the files in Directus's uploads and link them to their respective Items's fields for simple usability. If you use lots of images in you project, take a look at also installing [gatsby-plugin-sharp](https://www.gatsbyjs.org/packages/gatsby-plugin-sharp/) and [gatsby-transformer-sharp](https://www.gatsbyjs.org/packages/gatsby-transformer-sharp/).
+
+This works really well with Gatsby's `createPages` function if you want to dynamically create content such as Blog posts from Directus, for instance.
 
 ## Installation Guide
 
@@ -43,17 +45,6 @@ module.exports = {
          */
         email: 'example@directususer.com',
         password: 'password123',
-        /**
-         * This plugin will automatically transform plural table names into their singular counterparts.
-         * However, if the name generated isn't correct, you can overwrite it
-         * by setting the 'nameExceptions` object.
-         * So, on the example below, a collection "Posts", will be transformed
-         * to "Article" node type.
-         * This config is optional.
-         */
-        nameExceptions: {
-          posts: 'Article',
-        },
       },
     },
   ],
@@ -69,7 +60,7 @@ So, for your `posts` and `categories` Collections, the queries would be `directu
 This plugin is using [Pluralize](https://github.com/blakeembrey/pluralize) module to transform plural table names into singular node types to conform to the Gatsby naming convention.
 If for some reason, the generated name doesn't seem right, you can overwrite the node name using the `nameExceptions` object in the plugin config. (see example above)
 
-### Example plugin with Gatsby's `createPages`
+### Example with Gatsby's `createPages`
 
 This example assumes that you have created a `posts` collection in Directus with `title`, `author` and `content` fields, and a barebones Gatsby app. Add the following files to your Gatsby project:
 
@@ -150,10 +141,9 @@ export const query = graphql`
 
 ## To do
 
-For now, the plugin only handles Collections and Files.
-
-I'm planning to extend the plugin to build better GraphQL relations from Directus's Many-To-One and Many-To-Many -relations
+- Implement markdown processing with something like [gatsby-transformer-remark](https://www.gatsbyjs.org/packages/gatsby-transformer-remark/)
+- Consider adding in rest of the data provided by Directus (users and activity for example)
 
 ## Contributions
 
-Feel free to contribute if you feel something's missing.
+Contributions are always welcome, if you come up with any feature requests, ideas or bugs just create an issue or a pull request!
