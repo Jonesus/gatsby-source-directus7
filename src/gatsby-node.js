@@ -59,7 +59,7 @@ exports.sourceNodes = async (
 
     info('Mapping Directus relations to Items...');
     const nodeEntities = prepareNodes(entities);
-    const relationMappedEntities = mapRelations(nodeEntities, relations);
+    const relationMappedEntities = mapRelations(nodeEntities, relations, nodeFiles);
 
     info('Mapping Directus files to Items...');
     const mappedEntities = mapFilesToNodes(nodeFiles, allCollectionsData, relationMappedEntities);

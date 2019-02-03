@@ -83,7 +83,7 @@ const containsNullValue = obj => Object.keys(obj).some(key => obj[key] === null)
  * gathering up all Many-To-Many relations. Afterwards we can iterate
  * over each Many-To-Many relation and build the correct GraphQL nodes.
  */
-export const mapRelations = (entities, relations) => {
+export const mapRelations = (entities, relations, files) => {
     const mappedEntities = entities;
     const junctionRelations = {};
     relations.forEach(relation => {
@@ -111,7 +111,7 @@ export const mapRelations = (entities, relations) => {
                 delete newEntity[fm];
                 return newEntity;
             });
-        } else if (!containsNullValue(relation)) {
+        } else {
             // Many-to-many, need to find the pair relations before processing
             const cm = relation.collection_many;
             if (junctionRelations[cm] === undefined) {
@@ -124,17 +124,33 @@ export const mapRelations = (entities, relations) => {
 
     // Form the many-to-many relationships
     Object.keys(junctionRelations).forEach(junction => {
-        const junctions = junctionRelations[junction];
-        if (junctions.length !== 2) {
+        let junctions = junctionRelations[junction];
+        if (junctions.length % 2 !== 0) {
             error(
-                'Error while building relations for' +
-                    `${junctions[0].collection_many},` +
-                    'please check your Directus configuration.',
+                'Error while building relations for ' +
+                    `${junctions[0].collection_many}. ` +
+                    'Please check your Directus Relations collection.',
             );
+        }
+        if (junctions.length >= 4) {
+            // Directus Many-To-Many relational table entries get generated
+            // in a weird fashion where there might be redundant entries.
+            junctions = junctions.filter(j => !containsNullValue(j));
+            if (junctions.length !== 2) {
+                error(
+                    'Error while building relations for ' +
+                        `${junctions[0].collection_many}. ` +
+                        'Please check your Directus Relations collection.',
+                );
+            }
         }
         const firstCol = junctions[0].collection_one;
         const secondCol = junctions[1].collection_one;
         info(`Found Many-To-Many relation: ${firstCol} <-> ${secondCol}`);
+        if (junctions.some(containsNullValue)) {
+            junctions = junctions.filter(j => !containsNullValue(j));
+            warn(`Only ${junctions[0].collection_one} contains the relational field though.`);
+        }
         // Add relations to both directions
         junctions.forEach(j =>
             mappedEntities[j.collection_many].forEach(relation => {
@@ -144,9 +160,16 @@ export const mapRelations = (entities, relations) => {
                 const anotherCol = targetCol === firstCol ? secondCol : firstCol;
                 const targetItemId = relation[j.field_many];
                 const targetKey = `${j.field_one}___NODE`;
-                const targetVal = mappedEntities[anotherCol].find(
-                    e => e.directusId === relation[j.junction_field],
-                ).id;
+                let targetVal; // This gets tricky if the targets are files
+                if (anotherCol === 'directus_files') {
+                    targetVal = files.find(
+                        f => f.directus.directusId === relation[j.junction_field],
+                    ).gatsby.id;
+                } else {
+                    targetVal = mappedEntities[anotherCol].find(
+                        e => e.directusId === relation[j.junction_field],
+                    ).id;
+                }
                 mappedEntities[targetCol] = mappedEntities[targetCol].map(item =>
                     item.directusId === targetItemId
                         ? {
