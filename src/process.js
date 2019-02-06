@@ -7,7 +7,7 @@ export const warn = msg => console.log('gatsby-source-directus'.blue, 'warning'.
 export const error = (msg, e) => console.error('gatsby-source-directus'.blue, 'error'.red, msg, e);
 export const success = msg => console.log('gatsby-source-directus'.blue, 'success'.green, msg);
 
-const { createNodeFactory } = createNodeHelpers({
+const { createNodeFactory, generateNodeId } = createNodeHelpers({
     typePrefix: 'Directus',
 });
 
@@ -16,7 +16,7 @@ const { createNodeFactory } = createNodeHelpers({
  * All this does, is making the first letter uppercase and singularizing it if possible.
  * Also, it checks if there's an exception to this name to use instead
  */
-export const getNodeTypeNameForCollection = name => {
+const getNodeTypeNameForCollection = name => {
     let nodeName = name;
     // If the name is plural, use the Pluralize plugin to try make it singular
     // This is to conform to the Gatsby convention of using singular names in their node types
@@ -29,14 +29,32 @@ export const getNodeTypeNameForCollection = name => {
 };
 
 /**
+ * If the item from Directus doesn't have an id field, this generates
+ * one and assumes the first field's value is good enough to be an
+ * unique identifier.
+ *
+ * Directus's tutorials for creating translations doesn't add an
+ * ID field to the translation tables, resulting in default node
+ * generation giving every language item with id 'undefined'. This should
+ * circumvent that issue.
+ */
+const ensureNodeHasId = nodeType => node => {
+    if (node.id.endsWith('undefined')) {
+        const candidateId = node[Object.keys(node).shift()];
+        node.id = generateNodeId(nodeType, candidateId);
+    }
+    return node;
+};
+
+/**
  * Calls a node creation helper on each item
  */
 export const prepareNodes = entities => {
     const newEntities = entities;
     Object.keys(entities).forEach(entity => {
         const name = getNodeTypeNameForCollection(entity);
-        const generateItemNode = createNodeFactory(name);
-        newEntities[entity] = newEntities[entity].map(item => generateItemNode(item));
+        const generateItemNode = createNodeFactory(name, ensureNodeHasId(name));
+        newEntities[entity] = newEntities[entity].map(generateItemNode);
     });
     return newEntities;
 };
