@@ -99,7 +99,9 @@ export const mapRelations = (entities, relations, files) => {
             // to "Many" entities
             mappedEntities[co] = mappedEntities[co].map(entity => ({
                 ...entity,
-                [`${fo}___NODE`]: mappedEntities[cm].map(e => e.id),
+                [`${fo}___NODE`]: mappedEntities[cm]
+                    .filter(e => e[fm] === entity.directusId)
+                    .map(e => e.id),
             }));
 
             // Same in reverse (each "Many" gets a "One")
