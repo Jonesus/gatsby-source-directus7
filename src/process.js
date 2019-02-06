@@ -4,7 +4,7 @@ import Colors from 'colors'; // eslint-disable-line
 
 export const info = msg => console.log('gatsby-source-directus'.blue, 'info'.cyan, msg);
 export const warn = msg => console.log('gatsby-source-directus'.blue, 'warning'.yellow, msg);
-export const error = msg => console.error('gatsby-source-directus'.blue, 'error'.red, msg);
+export const error = (msg, e) => console.error('gatsby-source-directus'.blue, 'error'.red, msg, e);
 export const success = msg => console.log('gatsby-source-directus'.blue, 'success'.green, msg);
 
 const { createNodeFactory } = createNodeHelpers({

@@ -19,9 +19,20 @@ exports.sourceNodes = async (
     const { createNode } = actions;
 
     info('Directus Data Fetcher initializing...');
-    const fetcher = new Fetcher(url, project, email, password);
-    await fetcher.init();
-    success('Connected to Directus!');
+    let fetcher;
+    try {
+        fetcher = new Fetcher(url, project, email, password);
+        success('Connected to Directus!');
+    } catch (e) {
+        info('Failed to initialize Directus connection. Please check your gatsby-config.js');
+        throw e;
+    }
+    try {
+        await fetcher.init();
+        success('Logged in to Directus!');
+    } catch (e) {
+        info('Failed to log in. Attempting to use Directus public API...');
+    }
 
     info('Fetching Directus file data...');
     const allFilesData = await fetcher.getAllFiles();

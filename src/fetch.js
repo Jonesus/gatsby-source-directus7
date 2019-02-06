@@ -15,7 +15,8 @@ export default class DirectusFetcher {
                 project: project || '_',
             });
         } catch (e) {
-            error(`Error initializing DirectusFetcher: ${e}`);
+            error('Error initializing DirectusFetcher: ', e);
+            throw e;
         }
     }
 
@@ -31,7 +32,8 @@ export default class DirectusFetcher {
                 });
             }
         } catch (e) {
-            error(`Error logging in to Directus: ${e}`);
+            error('Error logging in to Directus: ', e);
+            throw e;
         }
     }
 
@@ -49,7 +51,7 @@ export default class DirectusFetcher {
             );
             return collections;
         } catch (e) {
-            console.error(`Error fetching Collections: ${e}`);
+            console.error('Error fetching Collections: ', e);
             return [];
         }
     }
@@ -68,7 +70,7 @@ export default class DirectusFetcher {
                     const items = await this.getItemsForCollection(collectionName);
                     entities[collectionName] = items;
                 } catch (e) {
-                    error(`Error fetching entities for Collection ${collectionName}: ${e}`);
+                    error(`Error fetching entities for Collection ${collectionName}: `, e);
                 }
             }),
         );
@@ -86,7 +88,7 @@ export default class DirectusFetcher {
             });
             return relationsData.data;
         } catch (e) {
-            error(`Error fetching Relations: ${e}`);
+            error('Error fetching Relations: ', e);
             return [];
         }
     }
@@ -99,7 +101,7 @@ export default class DirectusFetcher {
             const itemsData = await this.client.getItems(collectionName);
             return itemsData.data;
         } catch (e) {
-            error(`Error while fetching collection ${collectionName}: ${e}`);
+            error(`Error while fetching collection ${collectionName}: `, e);
             return [];
         }
     }
@@ -114,7 +116,7 @@ export default class DirectusFetcher {
             const filesData = await this.client.get('files');
             return filesData.data;
         } catch (e) {
-            error(`gatsby-source-directus: Error while fetching files: ${e}`);
+            error('gatsby-source-directus: Error while fetching files: ', e);
             return [];
         }
     }
