@@ -184,7 +184,7 @@ export const mapRelations = (entities, relations, files) => {
                 if (anotherCol === 'directus_files') {
                     targetVal = files.find(
                         f => f.directus.directusId === relation[j.junction_field],
-                    ).gatsby.id;
+                    ).directus.id;
                 } else {
                     targetVal = mappedEntities[anotherCol].find(
                         e => e.directusId === relation[j.junction_field],
@@ -238,7 +238,7 @@ export const mapFilesToNodes = (files, collections, entities) => {
         info(`Mapping files for ${c.collectionName}...`);
         newEntities[c.collectionName] = newEntities[c.collectionName].map(e => {
             const targetFileId = e[c.fieldName];
-            const fileId = files.find(f => f.directus.directusId === targetFileId).gatsby.id;
+            const fileId = files.find(f => f.directus.directusId === targetFileId).directus.id;
             return { ...e, [`${c.fieldName}___NODE`]: fileId };
         });
     });
