@@ -31,7 +31,7 @@ module.exports = {
         /**
          * The base URL of Directus.
          */
-        url: 'directus.example.com',
+        url: 'https://directus.example.com',
         /**
          * Directus project to connect to, if empty defaults to '_' (Directus's default project name).
          */
