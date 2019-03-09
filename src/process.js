@@ -124,9 +124,18 @@ export const mapRelations = (entities, relations, files) => {
 
             // Same in reverse (each "Many" gets a "One")
             mappedEntities[cm] = mappedEntities[cm].map(entity => {
+                const targetEntity = mappedEntities[co].find(e => e.directusId === entity[fm]);
+                if (!targetEntity) {
+                    warn(
+                        `Could not find an ManyToOne match in ${co} for item in ${cm} ` +
+                            `with id ${entity.directusId}. The field will be left null.`,
+                    );
+                    return entity;
+                }
+
                 const newEntity = {
                     ...entity,
-                    [`${fm}___NODE`]: mappedEntities[co].find(e => e.directusId === entity[fm]).id,
+                    [`${fm}___NODE`]: targetEntity.id,
                 };
                 delete newEntity[fm];
                 return newEntity;
