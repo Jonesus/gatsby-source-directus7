@@ -108,10 +108,28 @@ export const mapRelations = (entities, relations, files) => {
         if (relation.junction_field === null) {
             // Many-to-one, build the relation right away
             const co = relation.collection_one;
-            const fo = relation.field_one;
+            let fo = relation.field_one;
             const cm = relation.collection_many;
-            const fm = relation.field_many;
+            let fm = relation.field_many;
             info(`Found One-To-Many relation: ${co} -> ${cm}`);
+
+            // If the relation hasn't been defined in both collections, fall back
+            // to using the name of the related collection instead of the relation
+            // field
+            if (!fo) {
+                warn(
+                    `Missing OneToMany-relation in ${co}. The relation ` +
+                        `will be called ${cm} in GraphQL as a best guess.`,
+                );
+                fo = cm;
+            }
+            if (!fm) {
+                warn(
+                    `Missing ManyToOne-relation in ${cm}. The relation ` +
+                        `will be called ${co} in GraphQL as a best guess.`,
+                );
+                fm = co;
+            }
 
             // Replace each "One" entity with one that contains relations
             // to "Many" entities
