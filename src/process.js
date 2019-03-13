@@ -118,14 +118,14 @@ export const mapRelations = (entities, relations, files) => {
             // field
             if (!fo) {
                 warn(
-                    `Missing OneToMany-relation in ${co}. The relation ` +
+                    `Missing One-To-Many-relation in ${co}. The relation ` +
                         `will be called ${cm} in GraphQL as a best guess.`,
                 );
                 fo = cm;
             }
             if (!fm) {
                 warn(
-                    `Missing ManyToOne-relation in ${cm}. The relation ` +
+                    `Missing Many-To-One-relation in ${cm}. The relation ` +
                         `will be called ${co} in GraphQL as a best guess.`,
                 );
                 fm = co;
@@ -145,8 +145,8 @@ export const mapRelations = (entities, relations, files) => {
                 const targetEntity = mappedEntities[co].find(e => e.directusId === entity[fm]);
                 if (!targetEntity) {
                     warn(
-                        `Could not find an ManyToOne match in ${co} for item in ${cm} ` +
-                            `with id ${entity.directusId}. The field will be left null.`,
+                        `Could not find an Many-To-One match in ${co} for item in ${cm} ` +
+                            `with id ${entity.directusId}. The field value will be left null.`,
                     );
                     return entity;
                 }
