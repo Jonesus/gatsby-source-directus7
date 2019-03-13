@@ -111,6 +111,10 @@ export const mapRelations = (entities, relations, files) => {
             let fo = relation.field_one;
             const cm = relation.collection_many;
             let fm = relation.field_many;
+
+            // Try to filter out broken relations left over by Directus
+            if (!co || !cm) return;
+
             info(`Found One-To-Many relation: ${co} -> ${cm}`);
 
             // If the relation hasn't been defined in both collections, fall back
@@ -182,13 +186,25 @@ export const mapRelations = (entities, relations, files) => {
         if (junctions.length >= 4) {
             // Directus Many-To-Many relational table entries get generated
             // in a weird fashion where there might be redundant entries.
+            // For example, if a misconfiguration happens before stumbling
+            // upon a working M2M relation, the broken Relation items
+            // can still be found in the database.
             junctions = junctions.filter(j => !containsNullValue(j));
-            if (junctions.length !== 2) {
+            if (junctions.length < 2) {
                 error(
                     'Error while building relations for ' +
                         `${junctions[0].collection_many}. ` +
-                        'Please check your Directus Relations collection.',
+                        'Please check your Directus Relations collection ' +
+                        'and maybe try to delete and remake the relation.',
                 );
+            } else if (junctions.length > 2) {
+                warn(
+                    'There seems to be some broken data in the relation for ' +
+                        `${junctions[0].collection_many}. ` +
+                        'It might be left over from an earlier misconfiguration, ' +
+                        'we will attempt to use the latest configured settings.',
+                );
+                junctions = junctions.slice(-2);
             }
         }
         const firstCol = junctions[0].collection_one;
@@ -209,13 +225,34 @@ export const mapRelations = (entities, relations, files) => {
                 const targetKey = `${j.field_one}___NODE`;
                 let targetVal; // This gets tricky if the targets are files
                 if (anotherCol === 'directus_files') {
-                    targetVal = files.find(
+                    const targetFile = files.find(
                         f => f.directus.directusId === relation[j.junction_field],
-                    ).directus.id;
+                    );
+
+                    if (!targetFile) {
+                        warn(
+                            `Could not find a match for file with id ` +
+                                `${relation[j.junction_field]} for field ${j.field_one} ` +
+                                `in ${targetCol}. ` +
+                                'The field value will be left null.',
+                        );
+                        return;
+                    }
+                    targetVal = targetFile.directus.id;
                 } else {
-                    targetVal = mappedEntities[anotherCol].find(
+                    const targetEntity = mappedEntities[anotherCol].find(
                         e => e.directusId === relation[j.junction_field],
-                    ).id;
+                    );
+                    if (!targetEntity) {
+                        warn(
+                            `Could not find an Many-To-Many match for item with id ` +
+                                `${relation[j.junction_field]} for field ${j.field_one} ` +
+                                `in ${targetCol}. ` +
+                                `The field value will be left null.`,
+                        );
+                        return;
+                    }
+                    targetVal = targetEntity.id;
                 }
                 mappedEntities[targetCol] = mappedEntities[targetCol].map(item =>
                     item.directusId === targetItemId
