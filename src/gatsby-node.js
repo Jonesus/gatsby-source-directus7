@@ -19,7 +19,7 @@ exports.sourceNodes = async (
     const { createNode } = actions;
 
     info('Directus Data Fetcher initializing...');
-    info(`targetStatus is: ${targetStatus} `)
+    info(`targetStatus is: ${targetStatus} `);
     let fetcher;
     try {
         fetcher = new Fetcher(url, project, email, password, targetStatus, defaultStatus);
