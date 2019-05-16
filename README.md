@@ -45,6 +45,16 @@ module.exports = {
          */
         email: 'example@directususer.com',
         password: 'password123',
+        /**
+         * Optional - set the status of the items you want to receive. E.g. if you functionality
+         * want to receive items with status 'published'.
+         * `targetStatus` sets the status you want the items to have. `defaultStatus`
+         * defines a fallback status that will also be accepted (e.g. you want
+         * items with status 'draft', but 'published' is also acceptable)
+         *
+         */
+        targetStatus: 'draft',
+        defaultStatus: 'published'
       },
     },
   ],
