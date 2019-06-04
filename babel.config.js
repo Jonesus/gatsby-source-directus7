@@ -5,7 +5,6 @@ const presets = [
             targets: {
                 node: 'current',
             },
-            useBuiltIns: 'usage',
         },
     ],
 ];
