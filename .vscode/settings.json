@@ -1,0 +1,11 @@
+{
+  "editor.formatOnSave": false,
+  "editor.tabSize": 4,
+  "[javascript]": {
+    "editor.tabSize": 4
+  },
+  "eslint.autoFixOnSave": true,
+  "eslint.validate": [
+    "javascript"
+  ]
+}
