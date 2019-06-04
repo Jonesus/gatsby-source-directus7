@@ -1,14 +1,16 @@
 import DirectusSDK from '@directus/sdk-js';
-import { error } from './process';
+import { info, warn, error } from './process';
 
 /**
  * Class with methods for fetching data from Directus
  * via their JS SDK
  */
 export default class DirectusFetcher {
-    constructor(url, project, email, password) {
+    constructor(url, project, email, password, targetStatus, defaultStatus) {
         this.email = email;
         this.password = password;
+        this.targetStatus = targetStatus;
+        this.defaultStatus = defaultStatus;
         try {
             this.client = new DirectusSDK({
                 url,
@@ -72,7 +74,7 @@ export default class DirectusFetcher {
                 } catch (e) {
                     error(`Error fetching entities for Collection ${collectionName}: `, e);
                 }
-            }),
+            }, this),
         );
         return entities;
     }
@@ -99,7 +101,77 @@ export default class DirectusFetcher {
     async getItemsForCollection(collectionName) {
         try {
             const itemsData = await this.client.getItems(collectionName, { limit: '-1' });
-            return itemsData.data;
+
+            if (!this.targetStatus) {
+                return itemsData.data;
+            } else {
+                // go through all items in collection to check against target status
+                const checkedItems = await Promise.all(
+                    itemsData.data.map(async item => {
+                        if (
+                            item.status === this.targetStatus ||
+                            (this.defaultStatus ? item.status === this.defaultStatus : false)
+                        ) {
+                            info(`Status matched for ${collectionName} ${item.id}. Using item`);
+                            return item;
+                        } else {
+                            info(
+                                `Target status not matched for ${collectionName} ${
+                                    item.id
+                                }. Going through revisions`,
+                            );
+                            // get all revisions
+                            const itemRevisions = await this.client.getItemRevisions(
+                                collectionName,
+                                item.id,
+                            );
+
+                            // go through all revisions and get the newest matching the target status
+                            const selectedItem = itemRevisions.data.reduce(
+                                (selectedItem, currentItem) => {
+                                    if (
+                                        currentItem.data.status === this.targetStatus &&
+                                        selectedItem.data.modified_on < currentItem.data.modified_on
+                                    ) {
+                                        return currentItem;
+                                    } else {
+                                        return selectedItem;
+                                    }
+                                },
+                            );
+                            if (selectedItem.data.status === this.targetStatus) {
+                                // workaround: the number fields in the JSON returned from getItemRevisions are Strings, need to convert
+                                Object.keys(selectedItem.data).forEach(field => {
+                                    const converted = Number(selectedItem.data[field]);
+                                    if (!isNaN(converted)) {
+                                        selectedItem.data[field] = converted;
+                                    }
+                                });
+                                info(
+                                    `Revision found that matches target status ${
+                                        this.targetStatus
+                                    } in ${collectionName} item ${item.id}`,
+                                );
+                                return selectedItem.data;
+                            } else {
+                                warn(
+                                    `No item of ${
+                                        item.id
+                                    } in ${collectionName} matched target status ${
+                                        this.targetStatus
+                                    }. This might lead to unexpected behavior!`,
+                                );
+                                return false;
+                            }
+                        }
+                    }),
+                );
+
+                // remove all items that didn't match the target status
+                return checkedItems.filter(item => {
+                    return item !== false;
+                });
+            }
         } catch (e) {
             error(`Error while fetching collection ${collectionName}: `, e);
             return [];
