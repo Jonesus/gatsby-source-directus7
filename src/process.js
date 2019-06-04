@@ -115,21 +115,26 @@ export const mapRelations = (entities, relations, files) => {
             // Try to filter out broken relations left over by Directus
             if (!co || !cm) return;
 
-            info(`Found One-To-Many relation: ${co} -> ${cm}`);
+            if (fm) {
+                info(`Found Many-To-One relation: ${co} -> ${cm}`);
+            }
+            if (fo) {
+                info(`Found One-To-Many relation: ${cm} -> ${co}`);
+            }
 
             // If the relation hasn't been defined in both collections, fall back
             // to using the name of the related collection instead of the relation
             // field
             if (!fo) {
                 warn(
-                    `Missing One-To-Many-relation in ${co}. The relation ` +
+                    `Missing One-To-Many relation in ${co}. The relation ` +
                         `will be called ${cm} in GraphQL as a best guess.`,
                 );
                 fo = cm;
             }
             if (!fm) {
                 warn(
-                    `Missing Many-To-One-relation in ${cm}. The relation ` +
+                    `Missing Many-To-One relation in ${cm}. The relation ` +
                         `will be called ${co} in GraphQL as a best guess.`,
                 );
                 fm = co;
