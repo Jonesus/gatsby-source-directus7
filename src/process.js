@@ -102,7 +102,7 @@ const containsNullValue = obj => Object.keys(obj).some(key => obj[key] === null)
  * over each Many-To-Many relation and build the correct GraphQL nodes.
  */
 export const mapRelations = (entities, relations, files) => {
-    const mappedEntities = entities;
+    const mappedEntities = Object.assign({}, entities);
     const junctionRelations = {};
     relations.forEach(relation => {
         if (relation.junction_field === null) {
