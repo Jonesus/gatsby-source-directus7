@@ -24,14 +24,14 @@ describe('prepareFileNodes', () => {
 describe('mapRelations', () => {
     const entityData = {
         movies: [
-            { id: 0, directusId: 0, name: 'Titanic', genres: 0 },
-            { id: 1, directusId: 1, name: 'Romeo & Juliet', genres: 1 },
-            { id: 2, directusId: 2, name: 'Bambi', genres: 1 },
-            { id: 4, directusId: 4, name: 'Wall-E', genres: 0 },
+            { id: 0, directusId: 0, name: 'Titanic', director: 0 },
+            { id: 1, directusId: 1, name: 'Romeo & Juliet', director: 1 },
+            { id: 2, directusId: 2, name: 'Bambi', director: 1 },
+            { id: 4, directusId: 4, name: 'Wall-E', director: 0 },
         ],
-        genres: [
-            { id: 0, directusId: 0, name: 'Family' },
-            { id: 1, directusId: 1, name: 'Comedy' },
+        directors: [
+            { id: 0, directusId: 0, name: 'John Smith' },
+            { id: 1, directusId: 1, name: 'Mary Sue' },
         ],
     };
     const expected = {
@@ -40,38 +40,38 @@ describe('mapRelations', () => {
                 id: 0,
                 directusId: 0,
                 name: 'Titanic',
-                genres___NODE: 0,
+                director___NODE: 0,
             },
             {
                 id: 1,
                 directusId: 1,
                 name: 'Romeo & Juliet',
-                genres___NODE: 1,
+                director___NODE: 1,
             },
             {
                 id: 2,
                 directusId: 2,
                 name: 'Bambi',
-                genres___NODE: 1,
+                director___NODE: 1,
             },
             {
                 id: 4,
                 directusId: 4,
                 name: 'Wall-E',
-                genres___NODE: 0,
+                director___NODE: 0,
             },
         ],
-        genres: [
+        directors: [
             {
                 id: 0,
                 directusId: 0,
-                name: 'Family',
+                name: 'John Smith',
                 movies___NODE: [0, 4],
             },
             {
                 id: 1,
                 directusId: 1,
-                name: 'Comedy',
+                name: 'Mary Sue',
                 movies___NODE: [1, 2],
             },
         ],
@@ -81,8 +81,8 @@ describe('mapRelations', () => {
         const relationData = [
             {
                 collection_many: 'movies',
-                field_many: 'genres',
-                collection_one: 'genres',
+                field_many: 'director',
+                collection_one: 'directors',
                 field_one: null,
                 junction_field: null,
             },
@@ -100,8 +100,8 @@ describe('mapRelations', () => {
         const relationData = [
             {
                 collection_many: 'movies',
-                field_many: 'genres',
-                collection_one: 'genres',
+                field_many: 'director',
+                collection_one: 'directors',
                 field_one: 'movies',
                 junction_field: null,
             },
