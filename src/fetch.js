@@ -104,74 +104,66 @@ export default class DirectusFetcher {
 
             if (!this.targetStatus) {
                 return itemsData.data;
-            } else {
-                // go through all items in collection to check against target status
-                const checkedItems = await Promise.all(
-                    itemsData.data.map(async item => {
-                        if (
-                            item.status === this.targetStatus ||
-                            (this.defaultStatus ? item.status === this.defaultStatus : false)
-                        ) {
-                            info(`Status matched for ${collectionName} ${item.id}. Using item`);
-                            return item;
-                        } else {
-                            info(
-                                `Target status not matched for ${collectionName} ${
-                                    item.id
-                                }. Going through revisions`,
-                            );
-                            // get all revisions
-                            const itemRevisions = await this.client.getItemRevisions(
-                                collectionName,
-                                item.id,
-                            );
-
-                            // go through all revisions and get the newest matching the target status
-                            const selectedItem = itemRevisions.data.reduce(
-                                (selectedItem, currentItem) => {
-                                    if (
-                                        currentItem.data.status === this.targetStatus &&
-                                        selectedItem.data.modified_on < currentItem.data.modified_on
-                                    ) {
-                                        return currentItem;
-                                    } else {
-                                        return selectedItem;
-                                    }
-                                },
-                            );
-                            if (selectedItem.data.status === this.targetStatus) {
-                                // workaround: the number fields in the JSON returned from getItemRevisions are Strings, need to convert
-                                Object.keys(selectedItem.data).forEach(field => {
-                                    const converted = Number(selectedItem.data[field]);
-                                    if (!isNaN(converted)) {
-                                        selectedItem.data[field] = converted;
-                                    }
-                                });
-                                info(
-                                    `Revision found that matches target status ${
-                                        this.targetStatus
-                                    } in ${collectionName} item ${item.id}`,
-                                );
-                                return selectedItem.data;
-                            } else {
-                                warn(
-                                    `No item of ${
-                                        item.id
-                                    } in ${collectionName} matched target status ${
-                                        this.targetStatus
-                                    }. This might lead to unexpected behavior!`,
-                                );
-                                return false;
-                            }
-                        }
-                    }),
-                );
-
-                // remove all items that didn't match the target status
-                return checkedItems.filter(item => {
-                    return item !== false;
-                });
             }
+            // go through all items in collection to check against target status
+            const checkedItems = await Promise.all(
+                itemsData.data.map(async item => {
+                    if (
+                        item.status === this.targetStatus ||
+                        (this.defaultStatus ? item.status === this.defaultStatus : false)
+                    ) {
+                        info(`Status matched for ${collectionName} ${item.id}. Using item`);
+                        return item;
+                    }
+                    info(
+                        `Target status not matched for ${collectionName} ${
+                            item.id
+                        }. Going through revisions`,
+                    );
+                    // get all revisions
+                    const itemRevisions = await this.client.getItemRevisions(
+                        collectionName,
+                        item.id,
+                    );
+
+                    // go through all revisions and get the newest matching the target status
+                    const selectedItem = itemRevisions.data.reduce((selected, current) => {
+                        if (
+                            current.data.status === this.targetStatus &&
+                            selected.data.modified_on < current.data.modified_on
+                        ) {
+                            return current;
+                        }
+                        return selected;
+                    });
+                    if (selectedItem.data.status === this.targetStatus) {
+                        // workaround: the number fields in the JSON returned from getItemRevisions are Strings, need to convert
+                        Object.keys(selectedItem.data).forEach(field => {
+                            const converted = Number(selectedItem.data[field]);
+                            if (!Number.isNaN(converted)) {
+                                selectedItem.data[field] = converted;
+                            }
+                        });
+                        info(
+                            `Revision found that matches target status ${
+                                this.targetStatus
+                            } in ${collectionName} item ${item.id}`,
+                        );
+                        return selectedItem.data;
+                    }
+                    warn(
+                        `No item of ${item.id} in ${collectionName} matched target status ${
+                            this.targetStatus
+                        }. This might lead to unexpected behavior!`,
+                    );
+                    return false;
+                }),
+            );
+
+            // remove all items that didn't match the target status
+            return checkedItems.filter(item => {
+                return item !== false;
+            });
         } catch (e) {
             error(`Error while fetching collection ${collectionName}: `, e);
             return [];
