@@ -16,9 +16,10 @@ exports.sourceNodes = async (
     { actions, store, cache, createNodeId },
     { url, project, email, password, targetStatus, defaultStatus },
 ) => {
+    info(`Started logging for ${'gatsby-source-directus7'.blue}.`);
     const { createNode } = actions;
 
-    info('Directus Data Fetcher initializing...');
+    info('Directus data fetcher initializing...');
     info(`targetStatus is: ${targetStatus} `);
     let fetcher;
     try {
@@ -32,7 +33,7 @@ exports.sourceNodes = async (
         await fetcher.init();
         success('Logged in to Directus!');
     } catch (e) {
-        info('Failed to log in. Attempting to use Directus public API...');
+        info('Failed to log in. Attempting to use public permission for Directus API...');
     }
 
     info('Fetching Directus file data...');
@@ -69,6 +70,9 @@ exports.sourceNodes = async (
     info('Fetching Directus Relations data...');
     const relations = await fetcher.getAllRelations();
 
+    success('Retrieved all data from Directus!');
+    info('Directus data processing starting...');
+
     info('Mapping Directus relations to Items...');
     const nodeEntities = prepareNodes(entities);
     const relationMappedEntities = mapRelations(nodeEntities, relations, nodeFiles);
@@ -80,4 +84,5 @@ exports.sourceNodes = async (
     await createNodesFromEntities(mappedEntities, createNode);
 
     success('All done!');
+    info(`Ended logging for ${'gatsby-source-directus7'.blue}.`);
 };
