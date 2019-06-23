@@ -136,6 +136,10 @@ export const mapRelations = (entities, relations, files) => {
                 fm = co;
             }
 
+            // Avoid misconfigured items breaking on 'undefined'
+            if (!mappedEntities[co]) mappedEntities[co] = [];
+            if (!mappedEntities[cm]) mappedEntities[cm] = [];
+
             // Replace each "One" entity with one that contains relations
             // to "Many" entities
             mappedEntities[co] = mappedEntities[co].map(entity => ({
@@ -213,59 +217,61 @@ export const mapRelations = (entities, relations, files) => {
             warn('but not the other way around.');
         }
         // Add relations to both directions
-        junctions.forEach(j =>
-            mappedEntities[j.collection_many].forEach(relation => {
-                // Finds the correct entity and adds the id of related
-                // item to the relation list
-                const targetCol = j.collection_one;
-                const anotherCol = targetCol === firstCol ? secondCol : firstCol;
-                const targetItemId = relation[j.field_many];
-                const targetKey = `${j.field_one}___NODE`;
-                let targetVal; // This gets tricky if the targets are files
-                if (anotherCol === 'directus_files') {
-                    const targetFile = files.find(
-                        f => f.directus.directusId === relation[j.junction_field],
-                    );
+        junctions.forEach(
+            j =>
+                mappedEntities[j.collection_many] &&
+                mappedEntities[j.collection_many].forEach(relation => {
+                    // Finds the correct entity and adds the id of related
+                    // item to the relation list
+                    const targetCol = j.collection_one;
+                    const anotherCol = targetCol === firstCol ? secondCol : firstCol;
+                    const targetItemId = relation[j.field_many];
+                    const targetKey = `${j.field_one}___NODE`;
+                    let targetVal; // This gets tricky if the targets are files
+                    if (anotherCol === 'directus_files') {
+                        const targetFile = files.find(
+                            f => f.directus && f.directus.directusId === relation[j.junction_field],
+                        );
 
-                    if (!targetFile) {
-                        warn(
-                            `Could not find a match for file with id '${
-                                relation[j.junction_field]
-                            }'`,
+                        if (!targetFile || !targetFile.directus || !targetFile.directus.id) {
+                            warn(
+                                `Could not find a match for file with id '${
+                                    relation[j.junction_field]
+                                }'`,
+                            );
+                            warn(`for field '${j.field_one}' in '${targetCol}'.`);
+                            warn('The field value will be left null.');
+                            return;
+                        }
+                        targetVal = targetFile.directus.id;
+                    } else {
+                        const targetEntity = mappedEntities[anotherCol].find(
+                            e => e.directusId === relation[j.junction_field],
                         );
-                        warn(`for field '${j.field_one}' in '${targetCol}'.`);
-                        warn('The field value will be left null.');
-                        return;
+                        if (!targetEntity || !targetEntity.id) {
+                            warn(
+                                `Could not find an Many-To-Many match for item with id '${
+                                    relation[j.junction_field]
+                                }'`,
+                            );
+                            warn(`for field '${j.field_one}' in '${targetCol}'. `);
+                            warn('The field value will be left null.');
+                            return;
+                        }
+                        targetVal = targetEntity.id;
                     }
-                    targetVal = targetFile.directus.id;
-                } else {
-                    const targetEntity = mappedEntities[anotherCol].find(
-                        e => e.directusId === relation[j.junction_field],
+                    mappedEntities[targetCol] = mappedEntities[targetCol].map(item =>
+                        item.directusId === targetItemId
+                            ? {
+                                  ...item,
+                                  [targetKey]:
+                                      item[targetKey] === undefined
+                                          ? [targetVal]
+                                          : [...item[targetKey], targetVal],
+                              }
+                            : item,
                     );
-                    if (!targetEntity) {
-                        warn(
-                            `Could not find an Many-To-Many match for item with id '${
-                                relation[j.junction_field]
-                            }'`,
-                        );
-                        warn(`for field '${j.field_one}' in '${targetCol}'. `);
-                        warn('The field value will be left null.');
-                        return;
-                    }
-                    targetVal = targetEntity.id;
-                }
-                mappedEntities[targetCol] = mappedEntities[targetCol].map(item =>
-                    item.directusId === targetItemId
-                        ? {
-                              ...item,
-                              [targetKey]:
-                                  item[targetKey] === undefined
-                                      ? [targetVal]
-                                      : [...item[targetKey], targetVal],
-                          }
-                        : item,
-                );
-            }),
+                }),
         );
     });
 
@@ -302,7 +308,14 @@ export const mapFilesToNodes = (files, collections, entities) => {
         info(`Mapping files for ${c.collectionName}...`);
         newEntities[c.collectionName] = newEntities[c.collectionName].map(e => {
             const targetFileId = e[c.fieldName];
-            const fileId = files.find(f => f.directus.directusId === targetFileId).directus.id;
+            const fileObj = files.find(f => f.directus && f.directus.directusId === targetFileId);
+            if (!fileObj || !fileObj.directus || !fileObj.directus.id) {
+                warn(`Cannot find file with id '${targetFileId}' for item with`);
+                warn(`id '${e.directusId}' in collection '${c.collectionName}'. Please ensure`);
+                warn(`that the field '${c.fieldName}' is filled if needed.`);
+                return e;
+            }
+            const fileId = fileObj.directus.id;
             return { ...e, [`${c.fieldName}___NODE`]: fileId };
         });
     });
