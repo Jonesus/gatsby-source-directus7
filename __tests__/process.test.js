@@ -1,5 +1,48 @@
 import { prepareNodes, prepareFileNodes, mapRelations } from '../src/process';
 
+// Mock data for relation testing
+const entityData = {
+    movies: [
+        { id: 0, directusId: 0, name: 'Titanic' },
+        { id: 1, directusId: 1, name: 'Romeo & Juliet', directors: 1 },
+        { id: 2, directusId: 2, name: 'Bambi', directors: 1 },
+        { id: 4, directusId: 4, name: 'Wall-E', directors: 0 },
+    ],
+    directors: [
+        { id: 0, directusId: 0, name: 'John Smith' },
+        { id: 1, directusId: 1, name: 'Mary Sue' },
+        { id: 2, directusId: 2, name: 'Walt Disney' },
+    ],
+    genres: [
+        { id: 0, directusId: 0, name: 'Sci-fi' },
+        { id: 1, directusId: 1, name: 'Comedy' },
+        { id: 2, directusId: 2, name: 'Action' },
+        { id: 3, directusId: 3, name: 'Thriller' },
+    ],
+};
+
+/* eslint-disable */
+const expectedData = {
+    movies: [
+        { id: 0, directusId: 0, name: 'Titanic' },
+        { id: 1, directusId: 1, name: 'Romeo & Juliet', directors___NODE: 1 },
+        { id: 2, directusId: 2, name: 'Bambi', directors___NODE: 1 },
+        { id: 4, directusId: 4, name: 'Wall-E', directors___NODE: 0 },
+    ],
+    directors: [
+        { id: 0, directusId: 0, name: 'John Smith', movies___NODE: [4] },
+        { id: 1, directusId: 1, name: 'Mary Sue', movies___NODE: [1, 2] },
+        { id: 2, directusId: 2, name: 'Walt Disney', movies___NODE: [] },
+    ],
+    genres: [
+        { id: 0, directusId: 0, name: 'Sci-fi' },
+        { id: 1, directusId: 1, name: 'Comedy' },
+        { id: 2, directusId: 2, name: 'Action' },
+        { id: 3, directusId: 3, name: 'Thriller' },
+    ],
+};
+/* eslint-enable */
+
 describe('prepareNodes', () => {
     test('generates proper replacement IDs', () => {
         const data = {
@@ -22,66 +65,11 @@ describe('prepareFileNodes', () => {
 });
 
 describe('mapRelations', () => {
-    const entityData = {
-        movies: [
-            { id: 0, directusId: 0, name: 'Titanic', director: 0 },
-            { id: 1, directusId: 1, name: 'Romeo & Juliet', director: 1 },
-            { id: 2, directusId: 2, name: 'Bambi', director: 1 },
-            { id: 4, directusId: 4, name: 'Wall-E', director: 0 },
-        ],
-        directors: [
-            { id: 0, directusId: 0, name: 'John Smith' },
-            { id: 1, directusId: 1, name: 'Mary Sue' },
-        ],
-    };
-    const expected = {
-        movies: [
-            {
-                id: 0,
-                directusId: 0,
-                name: 'Titanic',
-                director___NODE: 0,
-            },
-            {
-                id: 1,
-                directusId: 1,
-                name: 'Romeo & Juliet',
-                director___NODE: 1,
-            },
-            {
-                id: 2,
-                directusId: 2,
-                name: 'Bambi',
-                director___NODE: 1,
-            },
-            {
-                id: 4,
-                directusId: 4,
-                name: 'Wall-E',
-                director___NODE: 0,
-            },
-        ],
-        directors: [
-            {
-                id: 0,
-                directusId: 0,
-                name: 'John Smith',
-                movies___NODE: [0, 4],
-            },
-            {
-                id: 1,
-                directusId: 1,
-                name: 'Mary Sue',
-                movies___NODE: [1, 2],
-            },
-        ],
-    };
-
-    test('handles many-to-one properly', () => {
+    test('many-to-one works with proper relation', () => {
         const relationData = [
             {
                 collection_many: 'movies',
-                field_many: 'director',
+                field_many: 'directors',
                 collection_one: 'directors',
                 field_one: null,
                 junction_field: null,
@@ -93,14 +81,52 @@ describe('mapRelations', () => {
         const mappedEntities = mapRelations(entityData, relationData, []);
         console.log = originalLog;
 
-        expect(mappedEntities).toStrictEqual(expected);
+        expect(mappedEntities).toStrictEqual(expectedData);
     });
 
-    test('handles one-to-many properly', () => {
+    test('many-to-one attempts to fix broken "field_many"', () => {
         const relationData = [
             {
                 collection_many: 'movies',
-                field_many: 'director',
+                field_many: null,
+                collection_one: 'directors',
+                field_one: null,
+                junction_field: null,
+            },
+        ];
+
+        const originalLog = console.log;
+        console.log = jest.fn();
+        const mappedEntities = mapRelations(entityData, relationData, []);
+        console.log = originalLog;
+
+        expect(mappedEntities).toStrictEqual(expectedData);
+    });
+
+    test('many-to-one fails gracefully with broken "collection_many"', () => {
+        const relationData = [
+            {
+                collection_many: null,
+                field_many: 'directors',
+                collection_one: 'directors',
+                field_one: null,
+                junction_field: null,
+            },
+        ];
+
+        const originalLog = console.log;
+        console.log = jest.fn();
+        const mappedEntities = mapRelations(entityData, relationData, []);
+        console.log = originalLog;
+
+        expect(mappedEntities).toStrictEqual(entityData);
+    });
+
+    test('one-to-many works with proper relation', () => {
+        const relationData = [
+            {
+                collection_many: 'movies',
+                field_many: 'directors',
                 collection_one: 'directors',
                 field_one: 'movies',
                 junction_field: null,
@@ -112,6 +138,6 @@ describe('mapRelations', () => {
         const mappedEntities = mapRelations(entityData, relationData, []);
         console.log = originalLog;
 
-        expect(mappedEntities).toStrictEqual(expected);
+        expect(mappedEntities).toStrictEqual(expectedData);
     });
 });
