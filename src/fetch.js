@@ -129,14 +129,19 @@ export default class DirectusFetcher {
                     // go through all revisions and get the newest matching the target status
                     const selectedItem = itemRevisions.data.reduce((selected, current) => {
                         if (
+                            current.data &&
                             current.data.status === this.targetStatus &&
                             selected.data.modified_on < current.data.modified_on
                         ) {
                             return current;
                         }
                         return selected;
-                    });
-                    if (selectedItem.data.status === this.targetStatus) {
+                    }, {});
+                    if (
+                        selectedItem &&
+                        selectedItem.data &&
+                        selectedItem.data.status === this.targetStatus
+                    ) {
                         // workaround: the number fields in the JSON returned from getItemRevisions are Strings, need to convert
                         Object.keys(selectedItem.data).forEach(field => {
                             const converted = Number(selectedItem.data[field]);
