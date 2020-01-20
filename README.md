@@ -1,3 +1,7 @@
+## NOTE
+
+This project is deprecated in favor for the official plugin: [@directus/gatsby-source](https://github.com/directus/gatsby-source). This version will no longer be maintained.
+
 # gatsby-source-directus7
 
 Source plugin for pulling data into [Gatsby](https://github.com/gatsbyjs) from [Directus CMS](https://getdirectus.com/). Inspired by [iKonrad's original plugin](https://github.com/iKonrad/gatsby-source-directus/).
