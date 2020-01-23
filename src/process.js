@@ -2,8 +2,8 @@ import createNodeHelpers from 'gatsby-node-helpers';
 import Pluralize from 'pluralize';
 import Colors from 'colors'; // eslint-disable-line
 
-export const info = msg => console.log('GSD7:'.blue, 'info'.cyan, msg);
-export const warn = msg => console.log('GSD7:'.blue, 'warning'.yellow, msg);
+export const info = (msg, dontShow) => dontShow ? {} : console.log('GSD7:'.blue, 'info'.cyan, msg)
+export const warn = (msg, dontShow) => dontShow ? {} : console.log('GSD7:'.blue, 'warning'.yellow, msg) 
 export const error = (msg, e) => console.error('GSD7:'.blue, 'error'.red, msg, e);
 export const success = msg => console.log('GSD7:'.blue, 'success'.green, msg);
 
@@ -72,9 +72,15 @@ export const prepareFileNodes = files => {
  * createRemoteFileNode on them. Returns an object with both of them,
  * so that they can be linked into Directus's collections.
  */
-export const createNodesFromFiles = (files, createNode, createRemoteFileNode) =>
+export const createNodesFromFiles = (files, createNode, createRemoteFileNode, downloadFilesToLocal = true) =>
     Promise.all(
         files.map(async f => {
+            if(!downloadFilesToLocal) {
+                await createNode(f);
+                return {
+                    directus: f,
+                };
+            }
             let localFileNode;
             try {
                 localFileNode = await createRemoteFileNode(f);
@@ -101,7 +107,7 @@ const containsNullValue = obj => Object.keys(obj).some(key => obj[key] === null)
  * gathering up all Many-To-Many relations. Afterwards we can iterate
  * over each Many-To-Many relation and build the correct GraphQL nodes.
  */
-export const mapRelations = (entities, relations, files) => {
+export const mapRelations = (entities, relations, files, removeWarning, removeInfo) => {
     const mappedEntities = Object.assign({}, entities);
     const junctionRelations = {};
     relations.forEach(relation => {
@@ -116,23 +122,23 @@ export const mapRelations = (entities, relations, files) => {
             if (!co || !cm) return;
 
             if (fm) {
-                info(`Found Many-To-One relation: ${co} -> ${cm}`);
+                info(`Found Many-To-One relation: ${co} -> ${cm}`, removeInfo);
             }
             if (fo) {
-                info(`Found One-To-Many relation: ${cm} -> ${co}`);
+                info(`Found One-To-Many relation: ${cm} -> ${co}`, removeInfo);
             }
 
             // If the relation hasn't been defined in both collections, fall back
             // to using the name of the related collection instead of the relation
             // field
             if (!fo) {
-                warn(`Missing One-To-Many relation in '${co}'. The relation`);
-                warn(`will be called '${cm}' in GraphQL as a best guess.`);
+                warn(`Missing One-To-Many relation in '${co}'. The relation`, removeWarning);
+                warn(`will be called '${cm}' in GraphQL as a best guess.`, removeWarning);
                 fo = cm;
             }
             if (!fm) {
-                warn(`Missing Many-To-One relation in '${cm}'. The relation`);
-                warn(`will be called '${co}' in GraphQL as a best guess.`);
+                warn(`Missing Many-To-One relation in '${cm}'. The relation`, removeWarning);
+                warn(`will be called '${co}' in GraphQL as a best guess.`, removeWarning);
                 fm = co;
             }
 
@@ -153,8 +159,8 @@ export const mapRelations = (entities, relations, files) => {
             mappedEntities[cm] = mappedEntities[cm].map(entity => {
                 const targetEntity = mappedEntities[co].find(e => e.directusId === entity[fm]);
                 if (!targetEntity) {
-                    warn(`Could not find an Many-To-One match in '${co}' for item in '${cm}'`);
-                    warn(`with id '${entity.directusId}'. The field value will be left null.`);
+                    warn(`Could not find an Many-To-One match in '${co}' for item in '${cm}'`, removeWarning);
+                    warn(`with id '${entity.directusId}'. The field value will be left null.`, removeWarning);
                     return entity;
                 }
 
@@ -200,21 +206,21 @@ export const mapRelations = (entities, relations, files) => {
                 warn(
                     `There seems to be some broken data in the relation for '${
                         junctions[0].collection_many
-                    }'.`,
+                    }'.`, removeWarning
                 );
-                warn('It might be left over from an earlier misconfiguration,');
-                warn('we will attempt to use the latest configured settings.');
+                warn('It might be left over from an earlier misconfiguration,', removeWarning);
+                warn('we will attempt to use the latest configured settings.', removeWarning);
                 junctions = junctions.slice(-2);
             }
         }
         const firstCol = junctions[0].collection_one;
         const secondCol = junctions[1].collection_one;
-        info(`Found Many-To-Many relation: ${firstCol} <-> ${secondCol}`);
+        info(`Found Many-To-Many relation: ${firstCol} <-> ${secondCol}`, removeInfo);
         if (junctions.some(containsNullValue)) {
             junctions = junctions.filter(j => !containsNullValue(j));
-            warn(`Only '${junctions[0].collection_one}' contains the relational field though.`);
-            warn(`You will be able to access '${firstCol}' from '${secondCol}'`);
-            warn('but not the other way around.');
+            warn(`Only '${junctions[0].collection_one}' contains the relational field though.`, removeWarning);
+            warn(`You will be able to access '${firstCol}' from '${secondCol}'`, removeWarning);
+            warn('but not the other way around.', removeWarning);
         }
         // Add relations to both directions
         junctions.forEach(
@@ -237,10 +243,10 @@ export const mapRelations = (entities, relations, files) => {
                             warn(
                                 `Could not find a match for file with id '${
                                     relation[j.junction_field]
-                                }'`,
+                                }'`, removeWarning
                             );
-                            warn(`for field '${j.field_one}' in '${targetCol}'.`);
-                            warn('The field value will be left null.');
+                            warn(`for field '${j.field_one}' in '${targetCol}'.`, removeWarning);
+                            warn('The field value will be left null.', removeWarning);
                             return;
                         }
                         targetVal = targetFile.directus.id;
@@ -252,10 +258,10 @@ export const mapRelations = (entities, relations, files) => {
                             warn(
                                 `Could not find an Many-To-Many match for item with id '${
                                     relation[j.junction_field]
-                                }'`,
+                                }'`, removeWarning
                             );
-                            warn(`for field '${j.field_one}' in '${targetCol}'. `);
-                            warn('The field value will be left null.');
+                            warn(`for field '${j.field_one}' in '${targetCol}'. `, removeWarning);
+                            warn('The field value will be left null.', removeWarning);
                             return;
                         }
                         targetVal = targetEntity.id;
@@ -276,7 +282,7 @@ export const mapRelations = (entities, relations, files) => {
     });
 
     // Remove junction collections as they don't contain relevant data to user anymore
-    info('Cleaning junction collections...');
+    info('Cleaning junction collections...', removeInfo);
     Object.keys(junctionRelations).forEach(junction => {
         delete mappedEntities[junction];
     });
@@ -287,7 +293,7 @@ export const mapRelations = (entities, relations, files) => {
  * Iterates through files served by Directus and maps them to all
  * the Collections's Items which are supposed to have an attachment.
  */
-export const mapFilesToNodes = (files, collections, entities) => {
+export const mapFilesToNodes = (files, collections, entities, removeWarning, removeInfo) => {
     const newEntities = entities;
     // Figure out which Collections have fields that need to be
     // mapped to files
@@ -305,14 +311,14 @@ export const mapFilesToNodes = (files, collections, entities) => {
 
     // Map the right field in the right collection to a file node
     collectionsWithFiles.forEach(c => {
-        info(`Mapping files for ${c.collectionName}...`);
+        info(`Mapping files for ${c.collectionName}...`, removeInfo);
         newEntities[c.collectionName] = newEntities[c.collectionName].map(e => {
             const targetFileId = e[c.fieldName];
             const fileObj = files.find(f => f.directus && f.directus.directusId === targetFileId);
             if (!fileObj || !fileObj.directus || !fileObj.directus.id) {
-                warn(`Cannot find file with id '${targetFileId}' for item with`);
-                warn(`id '${e.directusId}' in collection '${c.collectionName}'. Please ensure`);
-                warn(`that the field '${c.fieldName}' is filled if needed.`);
+                warn(`Cannot find file with id '${targetFileId}' for item with`, removeWarning);
+                warn(`id '${e.directusId}' in collection '${c.collectionName}'. Please ensure`, removeWarning);
+                warn(`that the field '${c.fieldName}' is filled if needed.`, removeWarning);
                 return e;
             }
             const fileId = fileObj.directus.id;
