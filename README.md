@@ -1,6 +1,6 @@
-## NOTE
+## ⚠️ NOTE ⚠️
 
-This project is deprecated in favor for the official plugin: [@directus/gatsby-source](https://github.com/directus/gatsby-source). This version will no longer be maintained.
+This project is deprecated in favor of the official plugin: [@directus/gatsby-source-directus](https://github.com/directus/gatsby-source-directus). This repository will no longer be maintained.
 
 # gatsby-source-directus7
 
